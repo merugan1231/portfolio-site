@@ -36,6 +36,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# локальные данные и служба macOS (не для GitHub)
+/data/
+/com.user.portfolio-site.plist
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

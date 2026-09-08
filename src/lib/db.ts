@@ -1,0 +1,164 @@
+import { Pool, type PoolClient } from "pg";
+
+/**
+ * Хранилище на PostgreSQL (Neon и любой другой Postgres).
+ * Если DATABASE_URL не задан — используется файловый режим (data/*.json),
+ * чтобы сайт работал локально без базы.
+ */
+
+let pool: Pool | null = null;
+let tablesReady: Promise<void> | null = null;
+
+export function dbEnabled(): boolean {
+  return !!process.env.DATABASE_URL;
+}
+
+function getPool(): Pool {
+  if (!pool) {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+      max: 3,
+    });
+  }
+  return pool;
+}
+
+async function ensureTables(): Promise<void> {
+  if (!tablesReady) {
+    tablesReady = (async () => {
+      const client = await getPool().connect();
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS kv_store (
+            key TEXT PRIMARY KEY,
+            value JSONB NOT NULL,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+          );
+          CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            login TEXT NOT NULL UNIQUE,
+            email TEXT NOT NULL DEFAULT '',
+            phone TEXT NOT NULL DEFAULT '',
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'user',
+            method TEXT NOT NULL DEFAULT 'email',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+          );
+        `);
+      } finally {
+        client.release();
+      }
+    })();
+  }
+  return tablesReady;
+}
+
+/** Универсальное JSON-хранилище для документов (портфолио, коды и т.п.). */
+export async function kvGet<T>(key: string): Promise<T | null> {
+  await ensureTables();
+  const res = await getPool().query("SELECT value FROM kv_store WHERE key = $1", [key]);
+  return (res.rows[0]?.value as T) ?? null;
+}
+
+export async function kvSet(key: string, value: unknown): Promise<void> {
+  await ensureTables();
+  await getPool().query(
+    `INSERT INTO kv_store (key, value) VALUES ($1, $2)
+     ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = now()`,
+    [key, JSON.stringify(value)]
+  );
+}
+
+export async function kvDel(key: string): Promise<void> {
+  await ensureTables();
+  await getPool().query("DELETE FROM kv_store WHERE key = $1", [key]);
+}
+
+export type DbUser = {
+  id: string;
+  login: string;
+  email: string;
+  phone: string;
+  passwordHash: string;
+  role: "admin" | "user";
+  method: string;
+  createdAt: string;
+};
+
+function rowToUser(r: Record<string, unknown>): DbUser {
+  return {
+    id: r.id as string,
+    login: r.login as string,
+    email: r.email as string,
+    phone: r.phone as string,
+    passwordHash: r.password_hash as string,
+    role: r.role as "admin" | "user",
+    method: r.method as string,
+    createdAt: (r.created_at as Date).toISOString(),
+  };
+}
+
+export async function dbReadUsers(): Promise<DbUser[]> {
+  await ensureTables();
+  const res = await getPool().query("SELECT * FROM users ORDER BY created_at ASC");
+  return res.rows.map(rowToUser);
+}
+
+export async function dbUpsertUser(u: DbUser): Promise<void> {
+  await ensureTables();
+  await getPool().query(
+    `INSERT INTO users (id, login, email, phone, password_hash, role, method, created_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+     ON CONFLICT (id) DO UPDATE SET
+       login = EXCLUDED.login, email = EXCLUDED.email, phone = EXCLUDED.phone,
+       password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, method = EXCLUDED.method`,
+    [u.id, u.login, u.email, u.phone, u.passwordHash, u.role, u.method, u.createdAt]
+  );
+}
+
+/** Создание таблиц и стартовые данные: админ + портфолио по умолчанию. */
+export async function initDb(seedAdmin?: DbUser, seedPortfolio?: unknown): Promise<void> {
+  await ensureTables();
+  const client: PoolClient = await getPool().connect();
+  try {
+    if (seedAdmin) {
+      const exists = await client.query("SELECT 1 FROM users WHERE login = $1", [seedAdmin.login]);
+      if (exists.rowCount === 0) {
+        await client.query(
+          `INSERT INTO users (id, login, email, phone, password_hash, role, method, created_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (id) DO NOTHING`,
+          [seedAdmin.id, seedAdmin.login, seedAdmin.email, seedAdmin.phone,
+           seedAdmin.passwordHash, seedAdmin.role, seedAdmin.method, seedAdmin.createdAt]
+        );
+      }
+    }
+    if (seedPortfolio) {
+      const exists = await client.query("SELECT 1 FROM kv_store WHERE key = 'portfolio'");
+      if (exists.rowCount === 0) {
+        await client.query("INSERT INTO kv_store (key, value) VALUES ('portfolio', $1)", [
+          JSON.stringify(seedPortfolio),
+        ]);
+      }
+    }
+  } finally {
+    client.release();
+  }
+}
+
+export type Tx = PoolClient;
+
+export async function withTx<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    const result = await fn(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
+  }
+}

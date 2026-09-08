@@ -1,0 +1,32 @@
+import Link from "next/link";
+
+export default function Footer() {
+  return (
+    <footer className="border-t border-white/10 py-10">
+      <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-6 px-6 sm:flex-row">
+        <div className="text-center sm:text-left">
+          <p className="text-lg font-extrabold text-white">
+            Merugan<span className="gradient-text">MM</span>
+          </p>
+          <p className="mt-1 text-sm text-zinc-500">
+            © {new Date().getFullYear()} — Создание сайтов под ключ
+          </p>
+        </div>
+        <nav className="flex flex-wrap items-center justify-center gap-5 text-sm text-zinc-400">
+          <Link href="/" className="transition-colors hover:text-white">Главная</Link>
+          <Link href="/projects" className="transition-colors hover:text-white">Проекты</Link>
+          <Link href="/about" className="transition-colors hover:text-white">Обо мне</Link>
+          <Link href="/contacts" className="transition-colors hover:text-white">Контакты</Link>
+          <a
+            href="https://t.me/kollew"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary !px-4 !py-2 text-sm"
+          >
+            Написать в Telegram
+          </a>
+        </nav>
+      </div>
+    </footer>
+  );
+}
