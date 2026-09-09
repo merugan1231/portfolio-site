@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { takeCode, saveUser, findUserByLogin } from "@/lib/storage";
-import { newId } from "@/lib/users";
+import { takeCode, saveUser, findUserByLogin, findUserByUsername } from "@/lib/storage";
+import { newId, USERNAME_RE } from "@/lib/users";
 import { createSession } from "@/lib/sessions";
 import { SESSION_COOKIE } from "@/lib/current-user";
 
@@ -23,9 +23,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Неверный или устаревший код" }, { status: 400 });
   }
 
-  const { login, email, password } = payload;
+  const { login, username, displayName, email, password } = payload as {
+    login: string; username?: string; displayName?: string; email: string; password: string;
+  };
   if (await findUserByLogin(login)) {
     return NextResponse.json({ error: "Этот логин уже занят" }, { status: 409 });
+  }
+  const finalUsername = (username ?? "").trim();
+  if (!USERNAME_RE.test(finalUsername) || (await findUserByUsername(finalUsername))) {
+    return NextResponse.json({ error: "Юзернейм недоступен или некорректен" }, { status: 409 });
   }
 
   const user = {
@@ -37,6 +43,13 @@ export async function POST(request: Request) {
     role: "user" as const,
     method: "email",
     createdAt: new Date().toISOString(),
+    displayName: (displayName ?? "").trim(),
+    username: finalUsername,
+    avatarEmoji: "🧑‍💻",
+    avatarUrl: "",
+    bio: "",
+    contacts: [],
+    profileUpdatedAt: new Date().toISOString(),
   };
   await saveUser(user);
 

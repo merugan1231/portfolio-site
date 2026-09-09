@@ -13,7 +13,7 @@ export function dbEnabled(): boolean {
   return !!process.env.DATABASE_URL;
 }
 
-function getPool(): Pool {
+function getPoolInternal(): Pool {
   if (!pool) {
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
@@ -45,13 +45,68 @@ async function ensureTables(): Promise<void> {
             method TEXT NOT NULL DEFAULT 'email',
             created_at TIMESTAMPTZ NOT NULL DEFAULT now()
           );
+          CREATE TABLE IF NOT EXISTS works (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            summary TEXT NOT NULL DEFAULT '',
+            details TEXT NOT NULL DEFAULT '',
+            team TEXT NOT NULL DEFAULT '',
+            stack TEXT NOT NULL DEFAULT '',
+            budget TEXT NOT NULL DEFAULT '',
+            potential TEXT NOT NULL DEFAULT '',
+            links JSONB NOT NULL DEFAULT '[]',
+            verify_token TEXT NOT NULL,
+            verify_url TEXT NOT NULL DEFAULT '',
+            verify_status TEXT NOT NULL DEFAULT 'unverified',
+            verify_note TEXT NOT NULL DEFAULT '',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+          );
+          CREATE INDEX IF NOT EXISTS works_user_idx ON works (user_id);
+          CREATE TABLE IF NOT EXISTS reviews (
+            id TEXT PRIMARY KEY,
+            work_id TEXT NOT NULL,
+            author_id TEXT NOT NULL,
+            stars INTEGER NOT NULL,
+            text TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'published',
+            dispute_reason TEXT NOT NULL DEFAULT '',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+          );
+          CREATE INDEX IF NOT EXISTS reviews_work_idx ON reviews (work_id);
         `);
+        // Миграция: новые колонки профиля (для уже существующих таблиц)
+        const cols = [
+          ["display_name", "TEXT NOT NULL DEFAULT ''"],
+          ["username", "TEXT"],
+          ["avatar_emoji", "TEXT NOT NULL DEFAULT ''"],
+          ["avatar_url", "TEXT NOT NULL DEFAULT ''"],
+          ["bio", "TEXT NOT NULL DEFAULT ''"],
+          ["contacts", "JSONB NOT NULL DEFAULT '[]'"],
+          ["profile_updated_at", "TIMESTAMPTZ"],
+        ];
+        for (const [name, def] of cols) {
+          await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${name} ${def}`);
+        }
+        await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_username_idx ON users (lower(username)) WHERE username IS NOT NULL AND username <> ''`);
       } finally {
         client.release();
       }
     })();
   }
   return tablesReady;
+}
+
+/** Доступ к пулу для доменных модулей (works и т.п.). */
+export function getPool(): Pool {
+  return getPoolInternal();
+}
+
+/** Гарантия создания таблиц для внешних модулей. */
+export async function ensureTablesSafe(): Promise<void> {
+  await ensureTables();
 }
 
 /** Универсальное JSON-хранилище для документов (портфолио, коды и т.п.). */
@@ -84,7 +139,17 @@ export type DbUser = {
   role: "admin" | "user";
   method: string;
   createdAt: string;
+  // Профиль (новое)
+  displayName: string;      // имя, высвечивается над username
+  username: string | null;  // публичный @юзернейм для поиска (может быть не задан у OAuth-пользователей)
+  avatarEmoji: string;
+  avatarUrl: string;
+  bio: string;
+  contacts: { label: string; value: string }[];
+  profileUpdatedAt: string | null; // для ограничения смены имени/юза раз в сутки
 };
+
+export const DEFAULT_CONTACTS: { label: string; value: string }[] = [];
 
 function rowToUser(r: Record<string, unknown>): DbUser {
   return {
@@ -96,6 +161,13 @@ function rowToUser(r: Record<string, unknown>): DbUser {
     role: r.role as "admin" | "user",
     method: r.method as string,
     createdAt: (r.created_at as Date).toISOString(),
+    displayName: (r.display_name as string) ?? "",
+    username: (r.username as string) || null,
+    avatarEmoji: (r.avatar_emoji as string) ?? "",
+    avatarUrl: (r.avatar_url as string) ?? "",
+    bio: (r.bio as string) ?? "",
+    contacts: (r.contacts as DbUser["contacts"]) ?? [],
+    profileUpdatedAt: r.profile_updated_at ? (r.profile_updated_at as Date).toISOString() : null,
   };
 }
 
@@ -108,12 +180,17 @@ export async function dbReadUsers(): Promise<DbUser[]> {
 export async function dbUpsertUser(u: DbUser): Promise<void> {
   await ensureTables();
   await getPool().query(
-    `INSERT INTO users (id, login, email, phone, password_hash, role, method, created_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+    `INSERT INTO users (id, login, email, phone, password_hash, role, method, created_at,
+                        display_name, username, avatar_emoji, avatar_url, bio, contacts, profile_updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
      ON CONFLICT (id) DO UPDATE SET
        login = EXCLUDED.login, email = EXCLUDED.email, phone = EXCLUDED.phone,
-       password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, method = EXCLUDED.method`,
-    [u.id, u.login, u.email, u.phone, u.passwordHash, u.role, u.method, u.createdAt]
+       password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, method = EXCLUDED.method,
+       display_name = EXCLUDED.display_name, username = EXCLUDED.username,
+       avatar_emoji = EXCLUDED.avatar_emoji, avatar_url = EXCLUDED.avatar_url,
+       bio = EXCLUDED.bio, contacts = EXCLUDED.contacts, profile_updated_at = EXCLUDED.profile_updated_at`,
+    [u.id, u.login, u.email, u.phone, u.passwordHash, u.role, u.method, u.createdAt,
+     u.displayName, u.username, u.avatarEmoji, u.avatarUrl, u.bio, JSON.stringify(u.contacts), u.profileUpdatedAt]
   );
 }
 

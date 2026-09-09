@@ -25,10 +25,27 @@ const newProject = (): Project => ({
   year: String(new Date().getFullYear()),
 });
 
+type DisputedReview = {
+  review: { id: string; stars: number; text: string; disputeReason: string; createdAt: string };
+  workTitle: string;
+  workId: string;
+};
+
+type PendingWork = {
+  id: string;
+  title: string;
+  verifyToken: string;
+  verifyUrl: string;
+  verifyNote: string;
+  verifyStatus: string;
+};
+
 export default function AdminPage() {
   const router = useRouter();
   const [me, setMe] = useState<Me | null | undefined>(undefined);
-  const [tab, setTab] = useState<"portfolio" | "users">("portfolio");
+  const [tab, setTab] = useState<"portfolio" | "users" | "moderation">("portfolio");
+  const [disputed, setDisputed] = useState<DisputedReview[]>([]);
+  const [worksPending, setWorksPending] = useState<PendingWork[]>([]);
 
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
@@ -43,12 +60,15 @@ export default function AdminPage() {
   const loadAll = useCallback(async () => {
     const s = await fetch("/api/auth/me").then((r) => r.json());
     setMe(s.user && s.user.role === "admin" ? s.user : null);
-    const [d, u] = await Promise.all([
+    const [d, u, m] = await Promise.all([
       fetch("/api/portfolio").then((r) => r.json()),
       fetch("/api/admin/users").then((r) => (r.ok ? r.json() : { users: [] })),
+      fetch("/api/admin/moderation").then((r) => (r.ok ? r.json() : { disputed: [], worksPending: [] })),
     ]);
     setData(d);
     setUsers(u.users ?? []);
+    setDisputed(m.disputed ?? []);
+    setWorksPending(m.worksPending ?? []);
   }, []);
 
   useEffect(() => {
@@ -189,6 +209,7 @@ export default function AdminPage() {
           [
             ["portfolio", "Портфолио"],
             ["users", `Пользователи (${users.length})`],
+            ["moderation", `Модерация (${disputed.length + worksPending.length})`],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -386,12 +407,123 @@ export default function AdminPage() {
                   <td colSpan={4} className="px-6 py-8 text-center text-zinc-500">
                     Пока никто не зарегистрировался
                   </td>
-                </tr>
-              ) : null}
+                </tr>              ) : null}
             </tbody>
           </table>
         </section>
       )}
+
+      {tab === "moderation" && (
+        <ModerationTab
+          disputed={disputed}
+          worksPending={worksPending}
+          onAction={loadAll}
+        />
+      )}
+    </div>
+  );
+}
+
+function ModerationTab({
+  disputed,
+  worksPending,
+  onAction,
+}: {
+  disputed: DisputedReview[];
+  worksPending: PendingWork[];
+  onAction: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  async function decide(reviewId: string, action: "restore" | "remove") {
+    setBusy(true);
+    await fetch("/api/admin/moderation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reviewId, action }),
+    });
+    setBusy(false);
+    onAction();
+  }
+
+  async function verify(workId: string, status: "verified" | "unverified") {
+    setBusy(true);
+    await fetch("/api/admin/moderation", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workId, status }),
+    });
+    setBusy(false);
+    onAction();
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Оспоренные отзывы */}
+      <section>
+        <h2 className="text-lg font-semibold text-white">Оспоренные отзывы</h2>
+        <p className="mt-1 text-sm text-zinc-500">
+          Оценка ниже 4 звёзд без объяснения или явная несправедливость — удаляйте, обоснованная — возвращайте в публикацию.
+        </p>
+        <div className="mt-4 space-y-4">
+          {disputed.length === 0 && <p className="text-sm text-zinc-500">Споров нет 🎉</p>}
+          {disputed.map(({ review, workTitle }) => (
+            <div key={review.id} className="card p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="text-amber-300">{"★".repeat(review.stars)}{"☆".repeat(5 - review.stars)}</span>
+                  <span className="ml-3 text-sm text-zinc-400">к работе «{workTitle}»</span>
+                </div>
+                <span className="text-xs text-zinc-500">{new Date(review.createdAt).toLocaleDateString("ru-RU")}</span>
+              </div>
+              {review.text && <p className="mt-2 text-sm text-zinc-300">Текст отзыва: {review.text}</p>}
+              <p className="mt-2 rounded-lg border border-amber-300/20 bg-amber-300/5 p-3 text-sm text-amber-200">
+                Причина спора: {review.disputeReason}
+              </p>
+              <div className="mt-3 flex gap-3">
+                <button disabled={busy} onClick={() => decide(review.id, "restore")} className="btn btn-primary !py-2 text-xs">
+                  Оценка обоснована — вернуть
+                </button>
+                <button disabled={busy} onClick={() => decide(review.id, "remove")} className="btn btn-ghost !py-2 text-xs !text-red-400">
+                  Отзыв необоснованный — удалить
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Работы на проверке авторства */}
+      <section>
+        <h2 className="text-lg font-semibold text-white">Проверка авторства работ</h2>
+        <p className="mt-1 text-sm text-zinc-500">
+          Автопроверка не смогла подтвердить код (закрытая страница или динамический контент). Откройте ссылку,
+          найдите код — и подтвердите вручную.
+        </p>
+        <div className="mt-4 space-y-4">
+          {worksPending.length === 0 && <p className="text-sm text-zinc-500">Всё проверено ✅</p>}
+          {worksPending.map((w) => (
+            <div key={w.id} className="card p-5">
+              <div className="font-semibold text-white">{w.title}</div>
+              <div className="mt-1 text-xs text-zinc-500">
+                Код: <code className="select-all rounded bg-white/10 px-1.5 py-0.5 text-lime-300">{w.verifyToken}</code>
+              </div>
+              <a href={w.verifyUrl} target="_blank" rel="noopener noreferrer" className="mt-2 block break-all text-sm text-lime-300 hover:underline">
+                {w.verifyUrl} ↗
+              </a>
+              {w.verifyNote && <p className="mt-1 text-xs text-zinc-500">Автопроверка: {w.verifyNote}</p>}
+              <div className="mt-3 flex gap-3">
+                <button disabled={busy} onClick={() => verify(w.id, "verified")} className="btn btn-primary !py-2 text-xs">
+                  Код на месте — подтвердить
+                </button>
+                <button disabled={busy} onClick={() => verify(w.id, "unverified")} className="btn btn-ghost !py-2 text-xs !text-red-400">
+                  Кода нет — отклонить
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

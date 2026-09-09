@@ -68,12 +68,20 @@ export async function GET(
       role: "user",
       method: provider,
       createdAt: new Date().toISOString(),
+      displayName: (profile.name ?? "").trim().slice(0, 40),
+      username: login,
+      avatarEmoji: "🧑‍💻",
+      avatarUrl: "",
+      bio: "",
+      contacts: [],
+      profileUpdatedAt: new Date().toISOString(),
     };
     await saveUser(user);
   }
 
   const session = await createSession(user.id);
-  const res = NextResponse.redirect(`${siteUrl()}/?welcome=${encodeURIComponent(user.login)}`);
+  // После входа через Google предлагаем подтвердить/изменить юзернейм и имя (онбординг)
+  const res = NextResponse.redirect(`${siteUrl()}/onboarding`);
   res.cookies.set(SESSION_COOKIE, session.token, {
     httpOnly: true,
     sameSite: "lax",

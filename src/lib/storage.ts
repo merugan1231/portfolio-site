@@ -69,6 +69,24 @@ export async function findUserByLogin(login: string): Promise<StoredUser | undef
   return users.find((u) => u.login.toLowerCase() === login.toLowerCase());
 }
 
+/** Публичный юзернейм (@name) — без учёта регистра. */
+export async function findUserByUsername(username: string): Promise<StoredUser | undefined> {
+  const q = username.trim().toLowerCase();
+  if (!q) return undefined;
+  const users = await getUsers();
+  return users.find((u) => u.username && u.username.toLowerCase() === q);
+}
+
+/** Поиск пользователей по началу юзернейма (для поиска людей). */
+export async function searchUsersByUsername(q: string, limit = 10): Promise<StoredUser[]> {
+  const prefix = q.trim().toLowerCase();
+  if (!prefix) return [];
+  const users = await getUsers();
+  return users
+    .filter((u) => u.username && u.username.toLowerCase().startsWith(prefix))
+    .slice(0, limit);
+}
+
 export async function findUserByEmail(email: string): Promise<StoredUser | undefined> {
   const users = await getUsers();
   return users.find((u) => u.email && u.email === email.toLowerCase());
