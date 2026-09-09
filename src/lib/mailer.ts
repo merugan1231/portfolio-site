@@ -31,7 +31,7 @@ export async function sendVerificationEmail(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "DevShelf <onboarding@resend.dev>",
+        from: "DevShelf <noreply@merugan.is-a.dev>",
         to: [to],
         subject,
         html: `
