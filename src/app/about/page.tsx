@@ -12,7 +12,7 @@ export default function AboutPage() {
       </h1>
 
       <p className="relative mt-6 text-lg leading-relaxed text-zinc-300">
-        <strong className="text-white">MeruganMM</strong> — это библиотека работ и портфолио для всех,
+        <strong className="text-white">DevShelf</strong> — это библиотека работ и портфолио для всех,
         кто что-то создаёт: программистов, OSINT-специалистов, кейсистов, иллюстраторов, разработчиков
         приложений, сайтов и Telegram-ботов — и не только.
       </p>

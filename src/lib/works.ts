@@ -16,7 +16,7 @@ export const WORK_TYPES = [
   { id: "osint", label: "OSINT-расследование" },
   { id: "design", label: "Дизайн / иллюстрация" },
   { id: "script", label: "Скрипт / автоматизация" },
-  { id: "other", label: "Другое" },
+  { id: "custom", label: "Свой вариант" },
 ] as const;
 
 export type WorkType = (typeof WORK_TYPES)[number]["id"];
@@ -27,6 +27,7 @@ export type Work = {
   id: string;
   userId: string;
   type: WorkType;
+  typeCustom: string;    // свой вариант типа (когда type === "custom")
   title: string;
   summary: string;       // краткое описание
   details: string;       // как сделано, подробно
@@ -81,6 +82,7 @@ function rowToWork(r: Record<string, unknown>): Work {
     id: r.id as string,
     userId: r.user_id as string,
     type: r.type as WorkType,
+    typeCustom: (r.type_custom as string) ?? "",
     title: r.title as string,
     summary: r.summary as string,
     details: r.details as string,
@@ -100,13 +102,13 @@ function rowToWork(r: Record<string, unknown>): Work {
 
 export async function createWork(w: Omit<Work, "id" | "verifyToken" | "verifyStatus" | "verifyNote" | "createdAt" | "updatedAt"> & { verifyToken: string }): Promise<Work> {
   const now = new Date().toISOString();
-  const full: Work = { ...w, id: `w_${randomBytes(6).toString("hex")}`, verifyStatus: "unverified", verifyNote: "", createdAt: now, updatedAt: now };
+  const full: Work = { ...w, typeCustom: w.typeCustom ?? "", id: `w_${randomBytes(6).toString("hex")}`, verifyStatus: "unverified", verifyNote: "", createdAt: now, updatedAt: now };
   if (dbEnabled()) {
     await ensureTablesSafe();
     await getPool().query(
-      `INSERT INTO works (id, user_id, type, title, summary, details, team, stack, budget, potential, links, verify_token, verify_url, verify_status, verify_note, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
-      [full.id, full.userId, full.type, full.title, full.summary, full.details, full.team, full.stack,
+      `INSERT INTO works (id, user_id, type, type_custom, title, summary, details, team, stack, budget, potential, links, verify_token, verify_url, verify_status, verify_note, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+      [full.id, full.userId, full.type, full.typeCustom, full.title, full.summary, full.details, full.team, full.stack,
        full.budget, full.potential, JSON.stringify(full.links), full.verifyToken, full.verifyUrl,
        full.verifyStatus, full.verifyNote, full.createdAt, full.updatedAt]
     );
@@ -125,10 +127,10 @@ export async function updateWork(id: string, patch: Partial<Work>): Promise<Work
   if (dbEnabled()) {
     await ensureTablesSafe();
     await getPool().query(
-      `UPDATE works SET type=$2, title=$3, summary=$4, details=$5, team=$6, stack=$7, budget=$8,
-        potential=$9, links=$10, verify_url=$11, verify_status=$12, verify_note=$13, updated_at=$14
+      `UPDATE works SET type=$2, type_custom=$3, title=$4, summary=$5, details=$6, team=$7, stack=$8, budget=$9,
+        potential=$10, links=$11, verify_url=$12, verify_status=$13, verify_note=$14, updated_at=$15
        WHERE id=$1`,
-      [next.id, next.type, next.title, next.summary, next.details, next.team, next.stack, next.budget,
+      [next.id, next.type, next.typeCustom, next.title, next.summary, next.details, next.team, next.stack, next.budget,
        next.potential, JSON.stringify(next.links), next.verifyUrl, next.verifyStatus, next.verifyNote, next.updatedAt]
     );
   } else {
@@ -245,6 +247,65 @@ export async function getDisputedReviews(): Promise<Review[]> {
   return store.reviews.filter((r) => r.status === "disputed");
 }
 
+/** Свежие подтверждённые работы — «живая полка» на главной. */
+export async function getRecentVerifiedWorks(limit = 8): Promise<Work[]> {
+  if (dbEnabled()) {
+    await ensureTablesSafe();
+    const res = await getPool().query(
+      "SELECT * FROM works WHERE verify_status = 'verified' ORDER BY created_at DESC LIMIT $1",
+      [limit]
+    );
+    return res.rows.map(rowToWork);
+  }
+  const store = await fileRead();
+  return store.works
+    .filter((w) => w.verifyStatus === "verified")
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit);
+}
+
+/** Публичные цифры сервиса для главной. */
+export async function getServiceStats(): Promise<{
+  users: number;
+  works: number;
+  verified: number;
+  reviews: number;
+}> {
+  if (dbEnabled()) {
+    await ensureTablesSafe();
+    const [u, w, vw, rv] = await Promise.all([
+      getPool().query("SELECT count(*)::int AS n FROM users"),
+      getPool().query("SELECT count(*)::int AS n FROM works"),
+      getPool().query("SELECT count(*)::int AS n FROM works WHERE verify_status = 'verified'"),
+      getPool().query("SELECT count(*)::int AS n FROM reviews WHERE status = 'published'"),
+    ]);
+    return {
+      users: u.rows[0]?.n ?? 0,
+      works: w.rows[0]?.n ?? 0,
+      verified: vw.rows[0]?.n ?? 0,
+      reviews: rv.rows[0]?.n ?? 0,
+    };
+  }
+  const store = await fileRead();
+  const usersCount = await fileReadUsersCount();
+  return {
+    users: usersCount,
+    works: store.works.length,
+    verified: store.works.filter((w) => w.verifyStatus === "verified").length,
+    reviews: store.reviews.filter((r) => r.status === "published").length,
+  };
+}
+
+async function fileReadUsersCount(): Promise<number> {
+  try {
+    const raw = await fs.readFile(path.join(process.cwd(), "data", "users.json"), "utf-8");
+    const data = JSON.parse(raw) as { users?: unknown[] };
+    return data.users?.length ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 /** Работы, ожидающие проверки авторства (ссылка указана, статус не verified). */
 export async function getPendingVerificationWorks(): Promise<Work[]> {
   if (dbEnabled()) {
@@ -278,7 +339,7 @@ export async function getWorkRating(workId: string): Promise<Rating> {
 // ---------- Верификация собственности ----------
 
 export function newVerifyToken(): string {
-  return `MERUGAN-VERIFY:${randomBytes(5).toString("hex")}`;
+  return `DEV-VERIFY:${randomBytes(5).toString("hex")}`;
 }
 
 export function tokenFingerprint(token: string): string {
@@ -312,7 +373,7 @@ export async function autoVerify(token: string, rawUrl: string): Promise<{ statu
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
-    const res = await fetch(url, { signal: controller.signal, redirect: "follow", headers: { "User-Agent": "MeruganMM-Verify/1.0" } });
+    const res = await fetch(url, { signal: controller.signal, redirect: "follow", headers: { "User-Agent": "DevShelf-Verify/1.0" } });
     clearTimeout(timer);
     if (!res.ok) {
       return { status: "pending", note: `Страница ответила ${res.status} — требуется ручная проверка.` };

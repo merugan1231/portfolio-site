@@ -29,7 +29,7 @@ export async function sendVerificationEmail(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "MeruganMM <onboarding@resend.dev>",
+        from: "DevShelf <onboarding@resend.dev>",
         to: [to],
         subject,
         html: `

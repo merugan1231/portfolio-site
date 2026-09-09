@@ -13,6 +13,8 @@ function RegisterInner() {
 
   const [step, setStep] = useState<Step>("form");
   const [login, setLogin] = useState("");
+  const [username, setUsername] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
@@ -47,7 +49,7 @@ function RegisterInner() {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ login, email, password }),
+      body: JSON.stringify({ login, username, displayName, email, password }),
     });
     const body = await res.json();
     setLoading(false);
@@ -70,7 +72,7 @@ function RegisterInner() {
       return;
     }
     setStep("code");
-  }, [login, email, password, password2]);
+  }, [login, username, displayName, email, password, password2]);
 
   const confirmCode = useCallback(async () => {
     setError("");
@@ -120,13 +122,37 @@ function RegisterInner() {
 
             <div className="space-y-4">
               <label className="block">
-                <span className="mb-1.5 block text-sm text-zinc-400">Логин</span>
+                <span className="mb-1.5 block text-sm text-zinc-400">Логин для входа</span>
                 <input
                   value={login}
                   onChange={(e) => setLogin(e.target.value)}
                   className={input}
                   placeholder="latinica_123"
                   autoComplete="username"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-sm text-zinc-400">
+                  Юзернейм <span className="text-zinc-600">(по нему вас найдут: /u/…)</span>
+                </span>
+                <input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className={input}
+                  placeholder="ivan_dev"
+                  autoComplete="off"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-sm text-zinc-400">
+                  Имя <span className="text-zinc-600">(высветится над юзернеймом)</span>
+                </span>
+                <input
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className={input}
+                  placeholder="Иван Петров"
+                  autoComplete="name"
                 />
               </label>
               <label className="block">

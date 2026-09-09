@@ -13,6 +13,8 @@ type AdminUser = {
   role: string;
   method: string;
   createdAt: string;
+  plan?: "free" | "pro";
+  isPro?: boolean;
 };
 
 const newProject = (): Project => ({
@@ -117,6 +119,16 @@ export default function AdminPage() {
     setNotice(res.ok ? "✓ Сохранено" : "Ошибка сохранения");
     setTimeout(() => setNotice(""), 3000);
   }, [data]);
+
+  /** Ручная выдача/отключение Pro у пользователя (пока оплата не подключена). */
+  const setPro = useCallback(async (userId: string, pro: boolean) => {
+    await fetch("/api/admin/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, pro }),
+    });
+    loadAll();
+  }, [loadAll]);
 
   if (me === undefined || (me && !data)) {
     return (
@@ -378,6 +390,7 @@ export default function AdminPage() {
                 <th className="px-6 py-4">Логин</th>
                 <th className="px-6 py-4">Email</th>
                 <th className="px-6 py-4">Роль</th>
+                <th className="px-6 py-4">Тариф</th>
                 <th className="px-6 py-4">Дата</th>
               </tr>
             </thead>
@@ -397,6 +410,26 @@ export default function AdminPage() {
                   </td>
                   <td className="px-6 py-4 text-zinc-400">{u.email || "—"}</td>
                   <td className="px-6 py-4">{u.role === "admin" ? "Администратор" : "Пользователь"}</td>
+                  <td className="px-6 py-4">
+                    {u.isPro ? (
+                      <span className="flex items-center gap-2">
+                        <span className="rounded-md bg-amber-300/10 px-2 py-0.5 text-xs text-amber-300">Pro</span>
+                        <button
+                          onClick={() => setPro(u.id, false)}
+                          className="text-xs text-zinc-500 underline-offset-2 transition-colors hover:text-red-400 hover:underline"
+                        >
+                          отключить
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setPro(u.id, true)}
+                        className="text-xs text-zinc-500 underline-offset-2 transition-colors hover:text-lime-300 hover:underline"
+                      >
+                        Выдать Pro
+                      </button>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-zinc-500">
                     {new Date(u.createdAt).toLocaleDateString("ru-RU")}
                   </td>
@@ -404,7 +437,7 @@ export default function AdminPage() {
               ))}
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-zinc-500">
+                  <td colSpan={5} className="px-6 py-8 text-center text-zinc-500">
                     Пока никто не зарегистрировался
                   </td>
                 </tr>              ) : null}

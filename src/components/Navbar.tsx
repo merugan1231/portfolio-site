@@ -62,7 +62,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0b0c10]/85 backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6">
         <Link href="/" className="text-lg font-extrabold tracking-tight text-white">
-          Merugan<span className="gradient-text">MM</span>
+          Dev<span className="gradient-text">Shelf</span>
         </Link>
 
         {/* Десктоп-меню */}

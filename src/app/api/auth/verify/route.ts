@@ -50,6 +50,9 @@ export async function POST(request: Request) {
     bio: "",
     contacts: [],
     profileUpdatedAt: new Date().toISOString(),
+    plan: "free" as const,
+    planExpiresAt: null,
+    bioDetails: {},
   };
   await saveUser(user);
 

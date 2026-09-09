@@ -15,6 +15,7 @@ type Review = {
 type Work = {
   id: string;
   type: string;
+  typeCustom?: string;
   title: string;
   summary: string;
   details: string;
@@ -30,7 +31,7 @@ type Work = {
 
 const TYPE_LABELS: Record<string, string> = {
   site: "Сайт / лендинг", webapp: "Веб-приложение", bot: "Телеграм-бот", mobile: "Мобильное приложение",
-  osint: "OSINT-расследование", design: "Дизайн / иллюстрация", script: "Скрипт / автоматизация", other: "Другое",
+  osint: "OSINT-расследование", design: "Дизайн / иллюстрация", script: "Скрипт / автоматизация", custom: "Свой вариант",
 };
 
 function Stars({ value, onChange }: { value: number; onChange?: (v: number) => void }) {
@@ -122,7 +123,9 @@ export default function WorkPage() {
 
   return (
     <section className="mx-auto w-full max-w-4xl flex-1 px-6 py-12">
-      <div className="text-xs uppercase tracking-wide text-zinc-500">{TYPE_LABELS[work.type] ?? work.type}</div>
+      <div className="text-xs uppercase tracking-wide text-zinc-500">
+        {work.type === "custom" && work.typeCustom ? work.typeCustom : (TYPE_LABELS[work.type] ?? work.type)}
+      </div>
       <div className="mt-1 flex flex-wrap items-center gap-3">
         <h1 className="text-3xl font-extrabold text-white">{work.title}</h1>
         {work.verifyStatus === "verified" && (

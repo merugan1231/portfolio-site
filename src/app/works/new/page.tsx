@@ -12,6 +12,7 @@ export default function NewWorkPage() {
   const router = useRouter();
   const [types, setTypes] = useState<TypeInfo[]>([]);
   const [type, setType] = useState("");
+  const [typeCustom, setTypeCustom] = useState("");
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [details, setDetails] = useState("");
@@ -22,6 +23,7 @@ export default function NewWorkPage() {
   const [links, setLinks] = useState<{ label: string; url: string }[]>([{ label: "", url: "" }]);
   const [verifyUrl, setVerifyUrl] = useState("");
   const [created, setCreated] = useState<{ id: string; verifyToken: string; verifyStatus: string; verifyNote: string } | null>(null);
+  const [limitReached, setLimitReached] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -42,15 +44,24 @@ export default function NewWorkPage() {
 
   async function submit() {
     setError("");
+    if (type === "custom" && typeCustom.trim().length < 2) {
+      setError("Укажите свой вариант типа работы (минимум 2 символа)");
+      return;
+    }
     setSaving(true);
     const res = await fetch("/api/works", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type, title, summary, details, team, stack, budget, potential, links, verifyUrl }),
+      body: JSON.stringify({ type, typeCustom, title, summary, details, team, stack, budget, potential, links, verifyUrl }),
     });
     const body = await res.json().catch(() => ({}));
     setSaving(false);
     if (!res.ok) {
+      if (body.code === "limit_reached") {
+        setLimitReached(true);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
       setError(body.error ?? "Не удалось создать работу");
       return;
     }
@@ -103,6 +114,28 @@ export default function NewWorkPage() {
     );
   }
 
+  if (limitReached) {
+    return (
+      <section className="mx-auto w-full max-w-2xl flex-1 px-6 py-14">
+        <div className="card border-amber-300/20 p-8">
+          <h1 className="text-2xl font-extrabold text-white">Достигнут лимит работ 🛑</h1>
+          <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+            На бесплатном тарифе можно опубликовать до 5 работ. Оформите <strong className="text-amber-200">Pro за 499 ₽/мес</strong> —
+            и публикуйте без ограничений. Способ оплаты подключим совсем скоро, а пока напишите нам в Telegram — оформим Pro вручную.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <a href="https://t.me/kollew" target="_blank" rel="noopener noreferrer" className="btn btn-primary text-sm">
+              Написать в Telegram
+            </a>
+            <button onClick={() => router.push("/cabinet")} className="btn btn-ghost text-sm">
+              Вернуться в кабинет
+            </button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="mx-auto w-full max-w-3xl flex-1 px-6 py-12">
       <h1 className="text-3xl font-extrabold text-white">Новая работа</h1>
@@ -120,6 +153,15 @@ export default function NewWorkPage() {
               </option>
             ))}
           </select>
+          {type === "custom" && (
+            <input
+              value={typeCustom}
+              onChange={(e) => setTypeCustom(e.target.value)}
+              className={`${input} mt-2`}
+              placeholder="Напишите свой вариант: например, «Дашборд», «Чит-лист», «Шрифтовая пара»…"
+              maxLength={60}
+            />
+          )}
         </div>
 
         <div>

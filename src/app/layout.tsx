@@ -17,11 +17,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "MeruganMM — создание сайтов | Портфолио",
-    template: "%s — MeruganMM",
+    default: "DevShelf — полка работ разработчиков и креаторов",
+    template: "%s — DevShelf",
   },
   description:
-    "Портфолио веб-разработчика MeruganMM: лендинги, корпоративные сайты и веб-приложения на Next.js, React и TypeScript.",
+    "DevShelf — сервис, где программисты, OSINT-специалисты, кейсисты, иллюстраторы и создатели ботов собирают портфолио из подтверждённых работ с подробным описанием процесса.",
 };
 
 export const viewport: Viewport = {

@@ -86,11 +86,16 @@ async function ensureTables(): Promise<void> {
           ["bio", "TEXT NOT NULL DEFAULT ''"],
           ["contacts", "JSONB NOT NULL DEFAULT '[]'"],
           ["profile_updated_at", "TIMESTAMPTZ"],
+          ["plan", "TEXT NOT NULL DEFAULT 'free'"],
+          ["plan_expires_at", "TIMESTAMPTZ"],
+          ["bio_details", "JSONB NOT NULL DEFAULT '{}'"],
         ];
         for (const [name, def] of cols) {
           await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${name} ${def}`);
         }
         await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_username_idx ON users (lower(username)) WHERE username IS NOT NULL AND username <> ''`);
+        // Свой вариант типа работы у работ
+        await client.query(`ALTER TABLE works ADD COLUMN IF NOT EXISTS type_custom TEXT NOT NULL DEFAULT ''`);
       } finally {
         client.release();
       }
@@ -147,6 +152,9 @@ export type DbUser = {
   bio: string;
   contacts: { label: string; value: string }[];
   profileUpdatedAt: string | null; // для ограничения смены имени/юза раз в сутки
+  plan: "free" | "pro";            // тариф: лимит работ
+  planExpiresAt: string | null;    // до когда активен Pro
+  bioDetails: Record<string, string>; // биография по пунктам (все необязательны)
 };
 
 export const DEFAULT_CONTACTS: { label: string; value: string }[] = [];
@@ -168,6 +176,9 @@ function rowToUser(r: Record<string, unknown>): DbUser {
     bio: (r.bio as string) ?? "",
     contacts: (r.contacts as DbUser["contacts"]) ?? [],
     profileUpdatedAt: r.profile_updated_at ? (r.profile_updated_at as Date).toISOString() : null,
+    plan: (r.plan as DbUser["plan"]) ?? "free",
+    planExpiresAt: r.plan_expires_at ? (r.plan_expires_at as Date).toISOString() : null,
+    bioDetails: (r.bio_details as Record<string, string>) ?? {},
   };
 }
 
@@ -181,16 +192,19 @@ export async function dbUpsertUser(u: DbUser): Promise<void> {
   await ensureTables();
   await getPool().query(
     `INSERT INTO users (id, login, email, phone, password_hash, role, method, created_at,
-                        display_name, username, avatar_emoji, avatar_url, bio, contacts, profile_updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+                        display_name, username, avatar_emoji, avatar_url, bio, contacts, profile_updated_at,
+                        plan, plan_expires_at, bio_details)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
      ON CONFLICT (id) DO UPDATE SET
        login = EXCLUDED.login, email = EXCLUDED.email, phone = EXCLUDED.phone,
        password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, method = EXCLUDED.method,
        display_name = EXCLUDED.display_name, username = EXCLUDED.username,
        avatar_emoji = EXCLUDED.avatar_emoji, avatar_url = EXCLUDED.avatar_url,
-       bio = EXCLUDED.bio, contacts = EXCLUDED.contacts, profile_updated_at = EXCLUDED.profile_updated_at`,
+       bio = EXCLUDED.bio, contacts = EXCLUDED.contacts, profile_updated_at = EXCLUDED.profile_updated_at,
+       plan = EXCLUDED.plan, plan_expires_at = EXCLUDED.plan_expires_at, bio_details = EXCLUDED.bio_details`,
     [u.id, u.login, u.email, u.phone, u.passwordHash, u.role, u.method, u.createdAt,
-     u.displayName, u.username, u.avatarEmoji, u.avatarUrl, u.bio, JSON.stringify(u.contacts), u.profileUpdatedAt]
+     u.displayName, u.username, u.avatarEmoji, u.avatarUrl, u.bio, JSON.stringify(u.contacts), u.profileUpdatedAt,
+     u.plan ?? "free", u.planExpiresAt, JSON.stringify(u.bioDetails ?? {})]
   );
 }
 

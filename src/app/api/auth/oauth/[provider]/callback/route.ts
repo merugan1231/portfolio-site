@@ -53,7 +53,10 @@ export async function GET(
   const email = profile.email.toLowerCase();
   let user = (await getUsers()).find((u) => u.email === email);
   if (!user) {
-    const base = email.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20) || "user";
+    // База для логина и юзернейма: начинается с буквы, только латиница/цифры/_
+    const stripped = email.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "").replace(/^[0-9_]+/, "").replace(/[0-9_]+$/, "");
+    const rawBase = stripped.length > 0 ? stripped : "devuser";
+    const base = rawBase.length < 5 ? `${rawBase}dev` : rawBase.slice(0, 20);
     let login = base;
     let n = 1;
     while ((await getUsers()).some((u) => u.login.toLowerCase() === login.toLowerCase())) {
@@ -75,6 +78,9 @@ export async function GET(
       bio: "",
       contacts: [],
       profileUpdatedAt: new Date().toISOString(),
+      plan: "free",
+      planExpiresAt: null,
+      bioDetails: {},
     };
     await saveUser(user);
   }

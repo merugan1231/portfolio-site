@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { createWork, updateWork, getUserWorks, getWork, getWorkRating, getWorkReviews, autoVerify, newVerifyToken, WORK_TYPES, type WorkType, type WorkLink } from "@/lib/works";
+import { FREE_WORK_LIMIT, isPro } from "@/lib/users";
 
 const VALID_TYPES = new Set(WORK_TYPES.map((t) => t.id));
 const MAX_LINKS = 3;
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
   }
 
   const type = String(body.type ?? "") as WorkType;
+  const typeCustom = String(body.typeCustom ?? "").trim().slice(0, 60);
   const title = String(body.title ?? "").trim();
   const summary = String(body.summary ?? "").trim();
   const details = String(body.details ?? "").trim();
@@ -51,6 +53,9 @@ export async function POST(request: Request) {
   const verifyUrl = String(body.verifyUrl ?? "").trim();
 
   if (!VALID_TYPES.has(type)) return NextResponse.json({ error: "Выберите тип работы" }, { status: 400 });
+  if (type === "custom" && typeCustom.length < 2) {
+    return NextResponse.json({ error: "Укажите свой вариант типа (минимум 2 символа)" }, { status: 400 });
+  }
   if (title.length < 3 || title.length > 100) return NextResponse.json({ error: "Название: от 3 до 100 символов" }, { status: 400 });
   if (summary.length < 20 || summary.length > 400) return NextResponse.json({ error: "Краткое описание: от 20 до 400 символов" }, { status: 400 });
   if (details.length < 50) return NextResponse.json({ error: "Подробное описание: минимум 50 символов — расскажите, как делали работу" }, { status: 400 });
@@ -61,10 +66,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Ссылка для подтверждения должна начинаться с http(s)://" }, { status: 400 });
   }
 
+  // Лимит работ: 5 на бесплатном тарифе, безлимит на Pro
+  if (!isPro(user)) {
+    const existing = await getUserWorks(user.id);
+    if (existing.length >= FREE_WORK_LIMIT) {
+      return NextResponse.json(
+        { error: `На бесплатном тарифе можно опубликовать до ${FREE_WORK_LIMIT} работ. Оформите Pro за 499 ₽/мес — без ограничений.`, code: "limit_reached" },
+        { status: 403 }
+      );
+    }
+  }
+
   const token = newVerifyToken();
   const work = await createWork({
     userId: user.id,
     type,
+    typeCustom,
     title,
     summary,
     details,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { findUserByLogin, findUserByEmail, findUserByUsername, putCode } from "@/lib/storage";
-import { hashPassword, generateCode, USERNAME_RE } from "@/lib/users";
+import { hashPassword, generateCode, USERNAME_RE, USERNAME_RULE } from "@/lib/users";
 import { sendVerificationEmail } from "@/lib/mailer";
 
 export async function POST(request: Request) {
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Логин: 3–24 символа, латиница, цифры и _" }, { status: 400 });
   }
   if (!USERNAME_RE.test(username)) {
-    return NextResponse.json({ error: "Юзернейм: 3–24 символа, латиница, цифры и _ — по нему вас найдут другие" }, { status: 400 });
+    return NextResponse.json({ error: `Юзернейм: ${USERNAME_RULE} — по нему вас найдут другие` }, { status: 400 });
   }
   if (displayName.length < 2 || displayName.length > 40) {
     return NextResponse.json({ error: "Имя: от 2 до 40 символов" }, { status: 400 });

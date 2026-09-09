@@ -19,6 +19,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
       avatarEmoji: user.avatarEmoji,
       avatarUrl: user.avatarUrl,
       bio: user.bio,
+      bioDetails: user.bioDetails ?? {},
+      plan: user.plan ?? "free",
       contacts: user.contacts ?? [],
       memberSince: user.createdAt,
     },

@@ -8,7 +8,40 @@ export type User = StoredUser;
 /** Правило пользователя: имя и юзернейм можно менять раз в сутки. */
 const PROFILE_CHANGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
-export const USERNAME_RE = /^[a-zA-Z0-9_]{3,24}$/;
+/**
+ * Юзернейм: от 5 символов, начинается и заканчивается буквой,
+ * внутри — латиница, цифры и _.
+ */
+export const USERNAME_RE = /^[a-zA-Z][a-zA-Z0-9_]{3,22}[a-zA-Z]$/;
+export const USERNAME_RULE =
+  "от 5 до 24 символов, начинается и заканчивается буквой, внутри — латиница, цифры и _";
+
+/** Лимит работ на бесплатном тарифе. */
+export const FREE_WORK_LIMIT = 5;
+export const PRO_PRICE_LABEL = "499 ₽/мес";
+
+/** Pro активен, если план pro и подписка не истекла. */
+export function isPro(u: { plan?: string | null; planExpiresAt?: string | null }): boolean {
+  if (u.plan !== "pro") return false;
+  if (u.planExpiresAt && new Date(u.planExpiresAt).getTime() < Date.now()) return false;
+  return true;
+}
+
+/** Пункты биографии в профиле — все необязательные, заполняются по желанию. */
+export const BIO_DETAIL_FIELDS = [
+  { id: "specialization", label: "Специализация", placeholder: "Fullstack-разработчик, OSINT-аналитик, иллюстратор…" },
+  { id: "experience", label: "Опыт", placeholder: "3 года коммерческой разработки, 20+ проектов…" },
+  { id: "education", label: "Образование", placeholder: "Вуз, курсы, самообразование…" },
+  { id: "city", label: "Город", placeholder: "Москва / удалённо" },
+  { id: "languages", label: "Языки", placeholder: "Русский — родной, английский — B2" },
+  { id: "status", label: "Статус занятости", placeholder: "Открыт к заказам / на проекте / ищу команду" },
+  { id: "achievements", label: "Достижения", placeholder: "Хакатоны, публикации, open source, сертификаты…" },
+  { id: "funFact", label: "Интересный факт", placeholder: "То, что запомнит вас человек" },
+] as const;
+
+export type BioDetailId = (typeof BIO_DETAIL_FIELDS)[number]["id"];
+export type BioDetails = Partial<Record<BioDetailId, string>>;
+export const BIO_DETAIL_IDS = BIO_DETAIL_FIELDS.map((f) => f.id) as BioDetailId[];
 
 export function hashPassword(password: string): string {
   return "sha256:" + createHash("sha256").update(`pf-user::${password}`).digest("hex");

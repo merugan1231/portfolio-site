@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { saveUser, findUserByUsername } from "@/lib/storage";
-import { USERNAME_RE, canChangeProfile, profileCooldownLeft } from "@/lib/users";
+import { USERNAME_RE, USERNAME_RULE, canChangeProfile, profileCooldownLeft, BIO_DETAIL_IDS, isPro } from "@/lib/users";
 
 type Contact = { label: string; value: string };
 
@@ -19,7 +19,11 @@ export async function GET() {
       avatarEmoji: user.avatarEmoji,
       avatarUrl: user.avatarUrl,
       bio: user.bio,
+      bioDetails: user.bioDetails ?? {},
       contacts: user.contacts ?? [],
+      plan: user.plan ?? "free",
+      planExpiresAt: user.planExpiresAt,
+      isPro: isPro(user),
       canChangeName: canChangeProfile(user),
       cooldownHours: Math.ceil(cooldownLeft / 3600000),
       memberSince: user.createdAt, // приватно: только для владельца аккаунта
@@ -37,6 +41,7 @@ export async function PUT(request: Request) {
     avatarEmoji?: string;
     avatarUrl?: string;
     bio?: string;
+    bioDetails?: Record<string, unknown>;
     contacts?: Contact[];
   };
   try {
@@ -58,7 +63,7 @@ export async function PUT(request: Request) {
     }
     const username = body.username.trim();
     if (!USERNAME_RE.test(username)) {
-      return NextResponse.json({ error: "Юзернейм: 3–24 символа, латиница, цифры и _" }, { status: 400 });
+      return NextResponse.json({ error: `Юзернейм: ${USERNAME_RULE}` }, { status: 400 });
     }
     const taken = await findUserByUsername(username);
     if (taken && taken.id !== user.id) {
@@ -91,6 +96,21 @@ export async function PUT(request: Request) {
     next.avatarUrl = url.slice(0, 500);
   }
   if (body.bio !== undefined) next.bio = String(body.bio).slice(0, 500);
+
+  // Биография по пунктам: все поля необязательные, чистим неизвестные ключи
+  if (body.bioDetails !== undefined) {
+    if (typeof body.bioDetails !== "object" || body.bioDetails === null || Array.isArray(body.bioDetails)) {
+      return NextResponse.json({ error: "Некорректный формат биографии" }, { status: 400 });
+    }
+    const details: Record<string, string> = {};
+    for (const id of BIO_DETAIL_IDS) {
+      const v = body.bioDetails[id];
+      if (v === undefined || v === null) continue;
+      const s = String(v).trim().slice(0, 300);
+      if (s) details[id] = s;
+    }
+    next.bioDetails = details;
+  }
 
   if (body.contacts !== undefined) {
     if (!Array.isArray(body.contacts) || body.contacts.length > 5) {

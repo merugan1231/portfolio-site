@@ -6,10 +6,10 @@ export default function Footer() {
       <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-6 px-6 sm:flex-row">
         <div className="text-center sm:text-left">
           <p className="text-lg font-extrabold text-white">
-            Merugan<span className="gradient-text">MM</span>
+            Dev<span className="gradient-text">Shelf</span>
           </p>
           <p className="mt-1 text-sm text-zinc-500">
-            © {new Date().getFullYear()} — Создание сайтов под ключ
+            © {new Date().getFullYear()} — полка работ разработчиков и креаторов
           </p>
         </div>
         <nav className="flex flex-wrap items-center justify-center gap-5 text-sm text-zinc-400">

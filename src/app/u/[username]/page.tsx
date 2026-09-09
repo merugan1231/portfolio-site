@@ -10,13 +10,27 @@ type Profile = {
   avatarEmoji: string;
   avatarUrl: string;
   bio: string;
+  bioDetails: Record<string, string>;
   contacts: { label: string; value: string }[];
+  plan: "free" | "pro";
   memberSince: string;
+};
+
+const BIO_LABELS: Record<string, string> = {
+  specialization: "Специализация",
+  experience: "Опыт",
+  education: "Образование",
+  city: "Город",
+  languages: "Языки",
+  status: "Статус занятости",
+  achievements: "Достижения",
+  funFact: "Интересный факт",
 };
 
 type Work = {
   id: string;
   type: string;
+  typeCustom?: string;
   title: string;
   summary: string;
   rating: { avg: number; count: number };
@@ -25,7 +39,7 @@ type Work = {
 
 const TYPE_LABELS: Record<string, string> = {
   site: "Сайт", webapp: "Веб-приложение", bot: "Телеграм-бот", mobile: "Мобильное приложение",
-  osint: "OSINT", design: "Дизайн", script: "Скрипт", other: "Другое",
+  osint: "OSINT", design: "Дизайн", script: "Скрипт", custom: "Свой вариант",
 };
 
 export default function PublicProfilePage() {
@@ -78,6 +92,11 @@ export default function PublicProfilePage() {
           <h1 className="text-2xl font-extrabold text-white">{profile.displayName || profile.username}</h1>
           <p className="text-sm text-zinc-400">@{profile.username}</p>
           {profile.bio && <p className="mt-2 max-w-xl text-sm text-zinc-300">{profile.bio}</p>}
+          {profile.plan === "pro" && (
+            <span className="mt-2 inline-block rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-0.5 text-xs text-amber-200">
+              ⭐ Pro
+            </span>
+          )}
           {profile.contacts.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
               {profile.contacts.map((c, i) => (
@@ -96,6 +115,20 @@ export default function PublicProfilePage() {
         </div>
       </div>
 
+      {Object.keys(profile.bioDetails ?? {}).length > 0 && (
+        <div className="card mt-6 p-6">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-zinc-400">Биография</h2>
+          <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+            {Object.entries(profile.bioDetails).map(([k, v]) => (
+              <div key={k}>
+                <dt className="text-xs uppercase tracking-wide text-zinc-500">{BIO_LABELS[k] ?? k}</dt>
+                <dd className="mt-1 text-sm text-zinc-300">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
+
       <h2 className="mt-10 text-xl font-bold text-white">
         Подтверждённые работы <span className="text-sm font-normal text-zinc-500">({works.length})</span>
       </h2>
@@ -103,7 +136,9 @@ export default function PublicProfilePage() {
         {works.length === 0 && <p className="text-sm text-zinc-500">Пока нет подтверждённых работ.</p>}
         {works.map((w) => (
           <Link key={w.id} href={`/works/${w.id}`} className="card block p-5 transition-transform hover:-translate-y-0.5">
-            <div className="text-xs uppercase tracking-wide text-zinc-500">{TYPE_LABELS[w.type] ?? w.type}</div>
+            <div className="text-xs uppercase tracking-wide text-zinc-500">
+              {w.type === "custom" && w.typeCustom ? w.typeCustom : (TYPE_LABELS[w.type] ?? w.type)}
+            </div>
             <div className="mt-1 font-semibold text-white">{w.title}</div>
             <p className="mt-1.5 line-clamp-2 text-sm text-zinc-400">{w.summary}</p>
             <div className="mt-2 text-xs text-amber-300">
