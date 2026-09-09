@@ -111,9 +111,6 @@ function RegisterInner() {
                   {p.label}
                 </a>
               ))}
-              <a href="/api/auth/apple" className="btn btn-ghost w-full text-sm">
-                 Продолжить с Apple <span className="text-xs text-zinc-500">(скоро)</span>
-              </a>
             </div>
 
             <div className="my-6 flex items-center gap-3 text-xs text-zinc-600">
