@@ -52,6 +52,7 @@ export async function POST(request: Request) {
     plan: "free" as const,
     planExpiresAt: null,
     bioDetails: {},
+    roles: [],
   };
   await saveUser(user);
 

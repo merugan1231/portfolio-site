@@ -76,6 +76,15 @@ async function ensureTables(): Promise<void> {
             created_at TIMESTAMPTZ NOT NULL DEFAULT now()
           );
           CREATE INDEX IF NOT EXISTS reviews_work_idx ON reviews (work_id);
+          CREATE TABLE IF NOT EXISTS promo_codes (
+            code TEXT PRIMARY KEY,
+            days INTEGER NOT NULL,
+            created_by TEXT NOT NULL DEFAULT '',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            used_by TEXT,
+            used_at TIMESTAMPTZ,
+            note TEXT NOT NULL DEFAULT ''
+          );
         `);
         // Миграция: новые колонки профиля (для уже существующих таблиц)
         const cols = [
@@ -89,6 +98,7 @@ async function ensureTables(): Promise<void> {
           ["plan", "TEXT NOT NULL DEFAULT 'free'"],
           ["plan_expires_at", "TIMESTAMPTZ"],
           ["bio_details", "JSONB NOT NULL DEFAULT '{}'"],
+          ["roles", "JSONB NOT NULL DEFAULT '[]'"],
         ];
         for (const [name, def] of cols) {
           await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${name} ${def}`);
@@ -155,6 +165,7 @@ export type DbUser = {
   plan: "free" | "pro";            // тариф: лимит работ
   planExpiresAt: string | null;    // до когда активен Pro
   bioDetails: Record<string, string>; // биография по пунктам (все необязательны)
+  roles: string[];                    // роли пользователя (программист, осинтер, дизайнер…), макс. 3
 };
 
 export const DEFAULT_CONTACTS: { label: string; value: string }[] = [];
@@ -179,6 +190,7 @@ function rowToUser(r: Record<string, unknown>): DbUser {
     plan: (r.plan as DbUser["plan"]) ?? "free",
     planExpiresAt: r.plan_expires_at ? (r.plan_expires_at as Date).toISOString() : null,
     bioDetails: (r.bio_details as Record<string, string>) ?? {},
+    roles: (r.roles as string[]) ?? [],
   };
 }
 
@@ -193,18 +205,19 @@ export async function dbUpsertUser(u: DbUser): Promise<void> {
   await getPool().query(
     `INSERT INTO users (id, login, email, phone, password_hash, role, method, created_at,
                         display_name, username, avatar_emoji, avatar_url, bio, contacts, profile_updated_at,
-                        plan, plan_expires_at, bio_details)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+                        plan, plan_expires_at, bio_details, roles)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
      ON CONFLICT (id) DO UPDATE SET
        login = EXCLUDED.login, email = EXCLUDED.email, phone = EXCLUDED.phone,
        password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, method = EXCLUDED.method,
        display_name = EXCLUDED.display_name, username = EXCLUDED.username,
        avatar_emoji = EXCLUDED.avatar_emoji, avatar_url = EXCLUDED.avatar_url,
        bio = EXCLUDED.bio, contacts = EXCLUDED.contacts, profile_updated_at = EXCLUDED.profile_updated_at,
-       plan = EXCLUDED.plan, plan_expires_at = EXCLUDED.plan_expires_at, bio_details = EXCLUDED.bio_details`,
+       plan = EXCLUDED.plan, plan_expires_at = EXCLUDED.plan_expires_at, bio_details = EXCLUDED.bio_details,
+       roles = EXCLUDED.roles`,
     [u.id, u.login, u.email, u.phone, u.passwordHash, u.role, u.method, u.createdAt,
      u.displayName, u.username, u.avatarEmoji, u.avatarUrl, u.bio, JSON.stringify(u.contacts), u.profileUpdatedAt,
-     u.plan ?? "free", u.planExpiresAt, JSON.stringify(u.bioDetails ?? {})]
+     u.plan ?? "free", u.planExpiresAt, JSON.stringify(u.bioDetails ?? {}), JSON.stringify(u.roles ?? [])]
   );
 }
 
@@ -252,4 +265,61 @@ export async function withTx<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
   } finally {
     client.release();
   }
+}
+
+// ---------- Промокоды (подписка Pro за код от админа) ----------
+
+export type DbPromoCode = {
+  code: string;
+  days: number;
+  createdBy: string;
+  createdAt: string;
+  usedBy: string | null;
+  usedAt: string | null;
+  note: string;
+};
+
+function rowToPromo(r: Record<string, unknown>): DbPromoCode {
+  return {
+    code: r.code as string,
+    days: r.days as number,
+    createdBy: (r.created_by as string) ?? "",
+    createdAt: (r.created_at as Date).toISOString(),
+    usedBy: (r.used_by as string) ?? null,
+    usedAt: r.used_at ? (r.used_at as Date).toISOString() : null,
+    note: (r.note as string) ?? "",
+  };
+}
+
+export async function dbCreatePromoCode(p: DbPromoCode): Promise<void> {
+  await ensureTables();
+  await getPool().query(
+    `INSERT INTO promo_codes (code, days, created_by, created_at, note)
+     VALUES ($1, $2, $3, now(), $4) ON CONFLICT (code) DO NOTHING`,
+    [p.code, p.days, p.createdBy, p.note]
+  );
+}
+
+export async function dbListPromoCodes(): Promise<DbPromoCode[]> {
+  await ensureTables();
+  const res = await getPool().query("SELECT * FROM promo_codes ORDER BY created_at DESC LIMIT 100");
+  return res.rows.map(rowToPromo);
+}
+
+/** Атомарная активация промокода: помечаем использованным и возвращаем срок. */
+export async function dbRedeemPromoCode(code: string, userId: string): Promise<number | null> {
+  await ensureTables();
+  const res = await getPool().query(
+    `UPDATE promo_codes SET used_by = $2, used_at = now()
+     WHERE upper(code) = upper($1) AND used_by IS NULL
+     RETURNING days`,
+    [code, userId]
+  );
+  return res.rows[0]?.days ?? null;
+}
+
+export async function dbGetPromoCode(code: string): Promise<DbPromoCode | null> {
+  await ensureTables();
+  const res = await getPool().query("SELECT * FROM promo_codes WHERE upper(code) = upper($1)", [code]);
+  return res.rows[0] ? rowToPromo(res.rows[0]) : null;
 }

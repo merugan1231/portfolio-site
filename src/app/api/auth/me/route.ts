@@ -15,6 +15,7 @@ export async function GET() {
       avatarEmoji: user.avatarEmoji,
       avatarUrl: user.avatarUrl,
       bio: user.bio,
+      roles: user.roles ?? [],
       plan: user.plan ?? "free",
       isPro: (user.plan === "pro" && (!user.planExpiresAt || new Date(user.planExpiresAt).getTime() > Date.now())),
       needsProfile: !user.username || !(user.displayName ?? "").trim(),

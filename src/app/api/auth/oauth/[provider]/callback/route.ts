@@ -81,6 +81,7 @@ export async function GET(
       plan: "free",
       planExpiresAt: null,
       bioDetails: {},
+      roles: [],
     };
     await saveUser(user);
   }

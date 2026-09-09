@@ -77,13 +77,21 @@ export async function findUserByUsername(username: string): Promise<StoredUser |
   return users.find((u) => u.username && u.username.toLowerCase() === q);
 }
 
-/** Поиск пользователей по началу юзернейма (для поиска людей). */
-export async function searchUsersByUsername(q: string, limit = 10): Promise<StoredUser[]> {
+/**
+ * Поиск пользователей для страницы «Люди»: по началу юзернейма и/или роли.
+ * role — id из USER_ROLES; если задан, фильтруем по нему.
+ */
+export async function searchUsersByUsername(q: string, limit = 10, role?: string): Promise<StoredUser[]> {
   const prefix = q.trim().toLowerCase();
-  if (!prefix) return [];
+  if (!prefix && !role) return [];
   const users = await getUsers();
   return users
-    .filter((u) => u.username && u.username.toLowerCase().startsWith(prefix))
+    .filter((u) => {
+      if (!u.username) return false;
+      if (role && !(u.roles ?? []).includes(role)) return false;
+      if (prefix && !u.username.toLowerCase().startsWith(prefix)) return false;
+      return true;
+    })
     .slice(0, limit);
 }
 

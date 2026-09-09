@@ -42,12 +42,23 @@ type PendingWork = {
   verifyStatus: string;
 };
 
+type PromoCode = {
+  code: string;
+  days: number;
+  createdBy: string;
+  createdAt: string;
+  usedBy: string | null;
+  usedAt: string | null;
+  note: string;
+};
+
 export default function AdminPage() {
   const router = useRouter();
   const [me, setMe] = useState<Me | null | undefined>(undefined);
-  const [tab, setTab] = useState<"portfolio" | "users" | "moderation">("portfolio");
+  const [tab, setTab] = useState<"portfolio" | "users" | "moderation" | "promo">("portfolio");
   const [disputed, setDisputed] = useState<DisputedReview[]>([]);
   const [worksPending, setWorksPending] = useState<PendingWork[]>([]);
+  const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
 
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
@@ -62,15 +73,17 @@ export default function AdminPage() {
   const loadAll = useCallback(async () => {
     const s = await fetch("/api/auth/me").then((r) => r.json());
     setMe(s.user && s.user.role === "admin" ? s.user : null);
-    const [d, u, m] = await Promise.all([
+    const [d, u, m, p] = await Promise.all([
       fetch("/api/portfolio").then((r) => r.json()),
       fetch("/api/admin/users").then((r) => (r.ok ? r.json() : { users: [] })),
       fetch("/api/admin/moderation").then((r) => (r.ok ? r.json() : { disputed: [], worksPending: [] })),
+      fetch("/api/admin/promo").then((r) => (r.ok ? r.json() : { promoCodes: [] })),
     ]);
     setData(d);
     setUsers(u.users ?? []);
     setDisputed(m.disputed ?? []);
     setWorksPending(m.worksPending ?? []);
+    setPromoCodes(p.promoCodes ?? []);
   }, []);
 
   useEffect(() => {
@@ -222,6 +235,7 @@ export default function AdminPage() {
             ["portfolio", "Портфолио"],
             ["users", `Пользователи (${users.length})`],
             ["moderation", `Модерация (${disputed.length + worksPending.length})`],
+            ["promo", `Промокоды (${promoCodes.filter((c) => !c.usedBy).length})`],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -453,6 +467,126 @@ export default function AdminPage() {
           onAction={loadAll}
         />
       )}
+
+      {tab === "promo" && <PromoTab codes={promoCodes} onAction={loadAll} />}
+    </div>
+  );
+}
+
+function PromoTab({ codes, onAction }: { codes: PromoCode[]; onAction: () => void }) {
+  const [code, setCode] = useState("");
+  const [days, setDays] = useState("30");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [created, setCreated] = useState<{ code: string; days: number } | null>(null);
+
+  async function create() {
+    setError("");
+    setCreated(null);
+    setBusy(true);
+    const res = await fetch("/api/admin/promo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: code.trim(), days: Number(days), note: note.trim() }),
+    });
+    const body = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) {
+      setError(body.error ?? "Не удалось создать промокод");
+      return;
+    }
+    setCreated({ code: body.code, days: body.days });
+    setCode("");
+    setNote("");
+    onAction();
+  }
+
+  const inputCls =
+    "w-full rounded-xl border border-white/10 bg-zinc-900/70 px-4 py-2.5 text-sm text-white outline-none transition-colors focus:border-indigo-400";
+
+  return (
+    <div className="space-y-8">
+      <section className="card p-6">
+        <h2 className="text-lg font-semibold text-white">Создать промокод</h2>
+        <p className="mt-1 text-sm text-zinc-500">
+          Код одноразовый: активировавший его пользователь получает Pro на выбранный срок. У кого Pro уже активен — срок прибавится.
+        </p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-[1fr_auto_1fr]">
+          <label className="block">
+            <span className="mb-1 block text-sm text-zinc-400">Код (A-Z, 0-9, дефис)</span>
+            <input
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              className={`${inputCls} uppercase tracking-wider`}
+              placeholder="SHELF-2026"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm text-zinc-400">Срок Pro (дней)</span>
+            <input
+              value={days}
+              onChange={(e) => setDays(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              className={`${inputCls} w-28`}
+              inputMode="numeric"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm text-zinc-400">Заметка (кому/зачем, необязательно)</span>
+            <input value={note} onChange={(e) => setNote(e.target.value)} className={inputCls} placeholder="для конкурса, другу…" />
+          </label>
+        </div>
+        {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+        {created && (
+          <div className="mt-3 rounded-lg border border-lime-300/30 bg-lime-300/10 px-4 py-3 text-sm text-lime-200">
+            ✅ Промокод <strong className="select-all tracking-wider">{created.code}</strong> создан — даёт Pro на {created.days} дн.
+          </div>
+        )}
+        <button onClick={create} disabled={busy} className="btn btn-primary mt-4 text-sm disabled:opacity-50">
+          {busy ? "Создаю…" : "Создать промокод"}
+        </button>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold text-white">Все промокоды</h2>
+        <div className="mt-4 overflow-x-auto rounded-2xl border border-white/10">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-white/10 bg-white/[0.02] text-xs uppercase tracking-wider text-zinc-500">
+                <th className="px-4 py-3">Код</th>
+                <th className="px-4 py-3">Срок</th>
+                <th className="px-4 py-3">Статус</th>
+                <th className="px-4 py-3">Заметка</th>
+                <th className="px-4 py-3">Создан</th>
+              </tr>
+            </thead>
+            <tbody>
+              {codes.map((c) => (
+                <tr key={c.code} className="border-b border-white/5 last:border-0">
+                  <td className="px-4 py-3 font-mono font-semibold text-lime-300">{c.code}</td>
+                  <td className="px-4 py-3 text-zinc-300">{c.days} дн.</td>
+                  <td className="px-4 py-3">
+                    {c.usedBy ? (
+                      <span className="text-zinc-500">активирован {c.usedAt ? new Date(c.usedAt).toLocaleDateString("ru-RU") : ""}</span>
+                    ) : (
+                      <span className="rounded-md bg-lime-300/10 px-2 py-0.5 text-xs text-lime-300">свободен</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-zinc-500">{c.note || "—"}</td>
+                  <td className="px-4 py-3 text-zinc-500">{new Date(c.createdAt).toLocaleDateString("ru-RU")}</td>
+                </tr>
+              ))}
+              {codes.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center text-zinc-500">
+                    Промокодов ещё нет
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

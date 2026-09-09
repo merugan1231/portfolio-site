@@ -13,8 +13,10 @@ type Profile = {
   avatarUrl: string;
   bio: string;
   bioDetails: Record<string, string>;
+  roles: string[];
   contacts: { label: string; value: string }[];
   plan: "free" | "pro";
+  planExpiresAt: string | null;
   isPro: boolean;
   canChangeName: boolean;
   usernameLocked?: boolean;
@@ -52,6 +54,20 @@ const TYPE_LABELS: Record<string, string> = {
   osint: "OSINT", design: "Дизайн", script: "Скрипт", custom: "Свой вариант",
 };
 
+const ROLES = [
+  { id: "developer", label: "Программист", emoji: "💻" },
+  { id: "osint", label: "OSINT-аналитик", emoji: "🔍" },
+  { id: "designer", label: "Дизайнер", emoji: "🎨" },
+  { id: "tester", label: "Тестировщик (QA)", emoji: "🧪" },
+  { id: "devops", label: "DevOps", emoji: "⚙️" },
+  { id: "analyst", label: "Аналитик", emoji: "📊" },
+  { id: "marketer", label: "Маркетолог", emoji: "📈" },
+  { id: "writer", label: "Копирайтер", emoji: "✍️" },
+  { id: "gamedev", label: "Геймдев", emoji: "🎮" },
+  { id: "other", label: "Другое", emoji: "✨" },
+];
+const MAX_ROLES = 3;
+
 const VERIFY_BADGE: Record<Work["verifyStatus"], { text: string; cls: string }> = {
   verified: { text: "✅ Авторство подтверждено", cls: "border-lime-300/30 bg-lime-300/10 text-lime-200" },
   pending: { text: "⏳ На ручной проверке", cls: "border-amber-300/30 bg-amber-300/10 text-amber-200" },
@@ -82,7 +98,12 @@ export default function CabinetPage() {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [bio, setBio] = useState("");
   const [bioDetails, setBioDetails] = useState<Record<string, string>>({});
+  const [roles, setRoles] = useState<string[]>([]);
   const [contacts, setContacts] = useState<{ label: string; value: string }[]>([]);
+
+  // Промокод на Pro
+  const [promo, setPromo] = useState("");
+  const [promoBusy, setPromoBusy] = useState(false);
 
   const load = useCallback(async () => {
     const meRes = await fetch("/api/auth/me");
@@ -101,6 +122,7 @@ export default function CabinetPage() {
       setAvatarUrl(p.profile.avatarUrl ?? "");
       setBio(p.profile.bio ?? "");
       setBioDetails(p.profile.bioDetails ?? {});
+      setRoles(p.profile.roles ?? []);
       setContacts(p.profile.contacts ?? []);
     }
     const wRes = await fetch("/api/works");
@@ -119,7 +141,7 @@ export default function CabinetPage() {
     const res = await fetch("/api/profile", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, displayName, avatarEmoji, avatarUrl, bio, bioDetails, contacts }),
+      body: JSON.stringify({ username, displayName, avatarEmoji, avatarUrl, bio, bioDetails, roles, contacts }),
     });
     const body = await res.json().catch(() => ({}));
     setSaving(false);
@@ -128,6 +150,30 @@ export default function CabinetPage() {
       return;
     }
     setNotice("Профиль сохранён ✅");
+    load();
+  }
+
+  async function redeemPromo() {
+    setError("");
+    setNotice("");
+    if (!promo.trim()) {
+      setError("Введите промокод");
+      return;
+    }
+    setPromoBusy(true);
+    const res = await fetch("/api/promo/redeem", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: promo.trim() }),
+    });
+    const body = await res.json().catch(() => ({}));
+    setPromoBusy(false);
+    if (!res.ok) {
+      setError(body.error ?? "Не удалось активировать промокод");
+      return;
+    }
+    setPromo("");
+    setNotice(`Промокод активирован ✅ Pro до ${new Date(body.planExpiresAt).toLocaleDateString("ru-RU")}`);
     load();
   }
 
@@ -277,6 +323,30 @@ export default function CabinetPage() {
             ))}
           </div>
 
+          <h3 className="mt-6 text-sm font-semibold text-white">Кто вы? (до {MAX_ROLES} ролей — по ним вас найдут в поиске)</h3>
+          <p className="mt-1 text-xs text-zinc-500">Например, вы пишете OSINT-кейсы и программируете — отметьте «OSINT-аналитик» и «Программист».</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {ROLES.map((r) => {
+              const active = roles.includes(r.id);
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() =>
+                    setRoles(active ? roles.filter((x) => x !== r.id) : roles.length < MAX_ROLES ? [...roles, r.id] : roles)
+                  }
+                  className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
+                    active
+                      ? "border-lime-300/50 bg-lime-300/15 text-lime-200"
+                      : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-white/20 hover:text-zinc-200"
+                  }`}
+                >
+                  {r.emoji} {r.label}
+                </button>
+              );
+            })}
+          </div>
+
           <h3 className="mt-6 text-sm font-semibold text-white">Ваши контакты (видны в профиле)</h3>
           <div className="mt-3 space-y-3">
             {contacts.map((c, i) => (
@@ -366,7 +436,7 @@ export default function CabinetPage() {
             ))}
           </div>
 
-          {!profile.isPro && (
+          {!profile.isPro ? (
             <div className="card mt-6 border-amber-300/20 p-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
@@ -376,10 +446,49 @@ export default function CabinetPage() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setNotice("Оплата подключим в ближайшее время — напишите нам в Telegram, оформим Pro вручную.")}
+                  onClick={() => setNotice("Оплату подключим в ближайшее время — напишите нам в Telegram, оформим Pro вручную.")}
                   className="btn btn-primary text-sm"
                 >
                   Оформить Pro
+                </button>
+              </div>
+              <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-white/10 pt-4">
+                <span className="text-sm text-zinc-400">Есть промокод?</span>
+                <input
+                  value={promo}
+                  onChange={(e) => setPromo(e.target.value.toUpperCase())}
+                  className="w-48 rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2 text-sm uppercase tracking-wider text-white outline-none transition-colors focus:border-indigo-400"
+                  placeholder="XXXX-XXXX"
+                />
+                <button onClick={redeemPromo} disabled={promoBusy} className="btn btn-ghost !py-2 text-sm disabled:opacity-50">
+                  {promoBusy ? "Активирую…" : "Активировать"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="card mt-6 border-amber-300/20 p-6">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-bold text-white">⭐ Pro активен</h3>
+                  <p className="mt-1 text-sm text-zinc-400">
+                    Без лимита работ. Подписка действует до{" "}
+                    <span className="font-semibold text-amber-200">
+                      {profile.planExpiresAt ? new Date(profile.planExpiresAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" }) : "—"}
+                    </span>
+                    . Продлить можно промокодом в любой момент.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-white/10 pt-4">
+                <span className="text-sm text-zinc-400">Продлить промокодом:</span>
+                <input
+                  value={promo}
+                  onChange={(e) => setPromo(e.target.value.toUpperCase())}
+                  className="w-48 rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2 text-sm uppercase tracking-wider text-white outline-none transition-colors focus:border-indigo-400"
+                  placeholder="XXXX-XXXX"
+                />
+                <button onClick={redeemPromo} disabled={promoBusy} className="btn btn-ghost !py-2 text-sm disabled:opacity-50">
+                  {promoBusy ? "Активирую…" : "Активировать"}
                 </button>
               </div>
             </div>

@@ -11,6 +11,7 @@ type Profile = {
   avatarUrl: string;
   bio: string;
   bioDetails: Record<string, string>;
+  roles: string[];
   contacts: { label: string; value: string }[];
   plan: "free" | "pro";
   memberSince: string;
@@ -25,6 +26,19 @@ const BIO_LABELS: Record<string, string> = {
   status: "Статус занятости",
   achievements: "Достижения",
   funFact: "Интересный факт",
+};
+
+const ROLE_LABELS: Record<string, { label: string; emoji: string }> = {
+  developer: { label: "Программист", emoji: "💻" },
+  osint: { label: "OSINT-аналитик", emoji: "🔍" },
+  designer: { label: "Дизайнер", emoji: "🎨" },
+  tester: { label: "Тестировщик (QA)", emoji: "🧪" },
+  devops: { label: "DevOps", emoji: "⚙️" },
+  analyst: { label: "Аналитик", emoji: "📊" },
+  marketer: { label: "Маркетолог", emoji: "📈" },
+  writer: { label: "Копирайтер", emoji: "✍️" },
+  gamedev: { label: "Геймдев", emoji: "🎮" },
+  other: { label: "Другое", emoji: "✨" },
 };
 
 type Work = {
@@ -91,6 +105,18 @@ export default function PublicProfilePage() {
         <div>
           <h1 className="text-2xl font-extrabold text-white">{profile.displayName || profile.username}</h1>
           <p className="text-sm text-zinc-400">@{profile.username}</p>
+          {(profile.roles ?? []).length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {(profile.roles ?? []).map((id) => {
+                const r = ROLE_LABELS[id];
+                return r ? (
+                  <span key={id} className="rounded-full border border-lime-300/25 bg-lime-300/10 px-2.5 py-0.5 text-xs font-medium text-lime-200">
+                    {r.emoji} {r.label}
+                  </span>
+                ) : null;
+              })}
+            </div>
+          )}
           {profile.bio && <p className="mt-2 max-w-xl text-sm text-zinc-300">{profile.bio}</p>}
           {profile.plan === "pro" && (
             <span className="mt-2 inline-block rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-0.5 text-xs text-amber-200">

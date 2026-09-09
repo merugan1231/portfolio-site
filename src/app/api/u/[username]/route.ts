@@ -20,6 +20,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
       avatarUrl: user.avatarUrl,
       bio: user.bio,
       bioDetails: user.bioDetails ?? {},
+      roles: user.roles ?? [],
       plan: user.plan ?? "free",
       contacts: user.contacts ?? [],
       memberSince: user.createdAt,

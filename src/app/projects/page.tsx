@@ -3,13 +3,13 @@ import Link from "next/link";
 import { getPortfolio } from "@/lib/storage";
 import type { Project } from "@/lib/portfolio";
 
-export const metadata: Metadata = { title: "Экспозиция" };
+export const metadata: Metadata = { title: "Лучшие работы наших пользователей" };
 export const dynamic = "force-dynamic";
 
 /**
- * «Экспозиция» — индивидуальная подача работ владельца сервиса:
+ * «Лучшие работы наших пользователей» — витрина сервиса:
  * вертикальная лента-выставка с чередованием сторон, крупным годом,
- * цветовой полосой по тегам и счётчиком экспонатов.
+ * цветовой полосой по тегам и счётчиком работ.
  */
 
 const ACCENTS = ["bg-lime-300", "bg-indigo-400", "bg-violet-400", "bg-amber-300", "bg-sky-400", "bg-rose-400"];
@@ -84,16 +84,16 @@ export default async function ProjectsPage() {
 
       {/* Шапка-афиша */}
       <div className="relative">
-        <p className="text-xs uppercase tracking-[0.3em] text-lime-300">DevShelf · выставка работ</p>
+        <p className="text-xs uppercase tracking-[0.3em] text-lime-300">DevShelf · витрина сервиса</p>
         <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
-          Экспозиция
+          Лучшие работы наших пользователей
         </h1>
         <p className="mt-4 max-w-2xl text-lg text-zinc-400">
-          Каждая работа — экспонат полки: год, теги и ссылки. Листайте вниз, как по выставочному залу.
+          Отобранные проекты сообщества: сайты, боты, OSINT-кейсы, дизайн. Листайте вниз — каждая работа с годом, тегами и ссылками.
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-3 text-sm text-zinc-500">
           <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-lime-300" />
-          Экспонатов в зале: {projects.length}
+          Работ в витрине: {projects.length}
           <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1 text-xs font-medium text-amber-200">
             🧪 Демо-версия раздела — оформление и наполнение могут меняться
           </span>
@@ -109,17 +109,17 @@ export default async function ProjectsPage() {
       </div>
 
       {projects.length === 0 && (
-        <p className="mt-14 text-zinc-500">Зал пока пуст — экспонаты скоро появятся.</p>
+        <p className="mt-14 text-zinc-500">Витрина пока пуста — работы появятся совсем скоро.</p>
       )}
 
-      {/* Финал зала */}
+      {/* Финал витрины */}
       <div className="card reveal mt-16 flex flex-col items-center gap-4 p-10 text-center">
-        <p className="text-2xl font-bold text-white">Конец экспозиции</p>
+        <p className="text-2xl font-bold text-white">Хотите видеть свою работу здесь?</p>
         <p className="max-w-md text-sm text-zinc-400">
-          Хотите такую же работу у себя? Напишите — обсудим задачу.
+          Опубликуйте проект, подтвердите авторство и получите оценки сообщества — лучшие попадают на витрину.
         </p>
-        <Link href="/contacts" className="btn btn-primary text-sm">
-          Обсудить заказ
+        <Link href="/register" className="btn btn-primary text-sm">
+          Начать бесплатно
         </Link>
       </div>
     </section>

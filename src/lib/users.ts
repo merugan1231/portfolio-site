@@ -44,6 +44,35 @@ export type BioDetailId = (typeof BIO_DETAIL_FIELDS)[number]["id"];
 export type BioDetails = Partial<Record<BioDetailId, string>>;
 export const BIO_DETAIL_IDS = BIO_DETAIL_FIELDS.map((f) => f.id) as BioDetailId[];
 
+/**
+ * Роли пользователя (кто он по деятельности) — показываются в профиле
+ * и по ним работает фильтр в поиске людей. Максимум 3 на аккаунт.
+ */
+export const USER_ROLES = [
+  { id: "developer", label: "Программист", emoji: "💻" },
+  { id: "osint", label: "OSINT-аналитик", emoji: "🔍" },
+  { id: "designer", label: "Дизайнер", emoji: "🎨" },
+  { id: "tester", label: "Тестировщик (QA)", emoji: "🧪" },
+  { id: "devops", label: "DevOps", emoji: "⚙️" },
+  { id: "analyst", label: "Аналитик", emoji: "📊" },
+  { id: "marketer", label: "Маркетолог", emoji: "📈" },
+  { id: "writer", label: "Копирайтер", emoji: "✍️" },
+  { id: "gamedev", label: "Геймдев", emoji: "🎮" },
+  { id: "other", label: "Другое", emoji: "✨" },
+] as const;
+
+export type UserRoleId = (typeof USER_ROLES)[number]["id"];
+export const USER_ROLE_IDS = USER_ROLES.map((r) => r.id) as UserRoleId[];
+export const MAX_USER_ROLES = 3;
+
+export function roleLabel(id: string): string {
+  return USER_ROLES.find((r) => r.id === id)?.label ?? id;
+}
+
+export function roleEmoji(id: string): string {
+  return USER_ROLES.find((r) => r.id === id)?.emoji ?? "•";
+}
+
 export function hashPassword(password: string): string {
   return "sha256:" + createHash("sha256").update(`pf-user::${password}`).digest("hex");
 }

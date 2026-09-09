@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { saveUser, findUserByUsername } from "@/lib/storage";
-import { USERNAME_RE, USERNAME_RULE, USERNAME_LOCKED_MSG, canChangeProfile, profileCooldownLeft, BIO_DETAIL_IDS, isPro } from "@/lib/users";
+import { USERNAME_RE, USERNAME_RULE, USERNAME_LOCKED_MSG, canChangeProfile, profileCooldownLeft, BIO_DETAIL_IDS, USER_ROLE_IDS, MAX_USER_ROLES, isPro } from "@/lib/users";
 
 type Contact = { label: string; value: string };
 
@@ -20,6 +20,7 @@ export async function GET() {
       avatarUrl: user.avatarUrl,
       bio: user.bio,
       bioDetails: user.bioDetails ?? {},
+      roles: user.roles ?? [],
       contacts: user.contacts ?? [],
       plan: user.plan ?? "free",
       planExpiresAt: user.planExpiresAt,
@@ -43,6 +44,7 @@ export async function PUT(request: Request) {
     avatarUrl?: string;
     bio?: string;
     bioDetails?: Record<string, unknown>;
+    roles?: unknown;
     contacts?: Contact[];
   };
   try {
@@ -111,6 +113,20 @@ export async function PUT(request: Request) {
       if (s) details[id] = s;
     }
     next.bioDetails = details;
+  }
+
+  // Роли пользователя: максимум 3, только известные id
+  if (body.roles !== undefined) {
+    if (!Array.isArray(body.roles)) {
+      return NextResponse.json({ error: "Некорректный формат ролей" }, { status: 400 });
+    }
+    const roles: string[] = [];
+    for (const r of body.roles) {
+      const id = String(r);
+      if (USER_ROLE_IDS.includes(id as never) && !roles.includes(id)) roles.push(id);
+      if (roles.length >= MAX_USER_ROLES) break;
+    }
+    next.roles = roles;
   }
 
   if (body.contacts !== undefined) {
