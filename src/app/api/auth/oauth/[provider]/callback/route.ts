@@ -37,7 +37,13 @@ export async function GET(
       redirect_uri: `${siteUrl()}${cfg.redirectPath}`,
     }),
   });
-  if (!tokenRes.ok) return fail("Не удалось войти через провайдера");
+  if (!tokenRes.ok) {
+    const errText = await tokenRes.text().catch(() => "");
+    console.error(`OAuth token exchange failed for ${provider}: ${tokenRes.status} ${errText}`);
+    // Показываем код ошибки провайдера (не секрет), чтобы можно было быстро диагностировать
+    const short = errText.slice(0, 120);
+    return fail(`Не удалось войти через провайдера (${tokenRes.status}: ${short})`);
+  }
   const tokenJson = (await tokenRes.json()) as { access_token?: string };
   if (!tokenJson.access_token) return fail("Провайдер не вернул токен");
 
