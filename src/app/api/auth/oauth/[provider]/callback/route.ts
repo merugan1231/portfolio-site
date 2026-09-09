@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomBytes } from "crypto";
 import { providerConfig, siteUrl } from "@/lib/oauth";
 import { getUsers, saveUser } from "@/lib/storage";
 import { hashPassword, newId } from "@/lib/users";
@@ -53,10 +54,9 @@ export async function GET(
   const email = profile.email.toLowerCase();
   let user = (await getUsers()).find((u) => u.email === email);
   if (!user) {
-    // База для логина и юзернейма: начинается с буквы, только латиница/цифры/_
-    const stripped = email.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "").replace(/^[0-9_]+/, "").replace(/[0-9_]+$/, "");
-    const rawBase = stripped.length > 0 ? stripped : "devuser";
-    const base = rawBase.length < 5 ? `${rawBase}dev` : rawBase.slice(0, 20);
+    // Служебный логин генерируем сами (по почте), но юзернейм НЕ подставляем:
+    // пользователь выберет его сам в онбординге — он закрепляется один раз.
+    const base = "dev" + randomBytes(3).toString("hex");
     let login = base;
     let n = 1;
     while ((await getUsers()).some((u) => u.login.toLowerCase() === login.toLowerCase())) {
@@ -72,12 +72,12 @@ export async function GET(
       method: provider,
       createdAt: new Date().toISOString(),
       displayName: (profile.name ?? "").trim().slice(0, 40),
-      username: login,
+      username: null,
       avatarEmoji: "🧑‍💻",
       avatarUrl: "",
       bio: "",
       contacts: [],
-      profileUpdatedAt: new Date().toISOString(),
+      profileUpdatedAt: null,
       plan: "free",
       planExpiresAt: null,
       bioDetails: {},

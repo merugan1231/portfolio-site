@@ -1,6 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
-import { dbEnabled, kvGet, kvSet, dbReadUsers, dbUpsertUser, type DbUser } from "./db";
+import { dbEnabled, kvGet, kvSet, dbReadUsers, dbUpsertUser, getPool, ensureTablesSafe, type DbUser } from "./db";
 import type { Portfolio } from "./portfolio";
 
 /**
@@ -90,6 +90,46 @@ export async function searchUsersByUsername(q: string, limit = 10): Promise<Stor
 export async function findUserByEmail(email: string): Promise<StoredUser | undefined> {
   const users = await getUsers();
   return users.find((u) => u.email && u.email === email.toLowerCase());
+}
+
+/**
+ * Полное удаление аккаунта: пользователь, его работы и отзывы на них,
+ * его отзывы на чужие работы, сессии и коды подтверждения.
+ * Возвращает количество удалённых работ (для отчёта).
+ */
+export async function deleteUserCompletely(userId: string): Promise<{ worksDeleted: number }> {
+  if (dbEnabled()) {
+    await ensureTablesSafe();
+    const pool = getPool();
+    const u = await pool.query("SELECT email FROM users WHERE id = $1", [userId]);
+    const email = (u.rows[0]?.email as string) ?? "";
+    const w = await pool.query("SELECT count(*)::int AS n FROM works WHERE user_id = $1", [userId]);
+    await pool.query("DELETE FROM reviews WHERE author_id = $1", [userId]);
+    await pool.query("DELETE FROM reviews WHERE work_id IN (SELECT id FROM works WHERE user_id = $1)", [userId]);
+    await pool.query("DELETE FROM works WHERE user_id = $1", [userId]);
+    await pool.query("DELETE FROM kv_store WHERE key LIKE 'session:%' AND value->>'userId' = $1", [userId]);
+    if (email) {
+      await pool.query("DELETE FROM kv_store WHERE key LIKE 'code:%' AND value->'payload'->>'email' = $1", [email]);
+    }
+    await pool.query("DELETE FROM users WHERE id = $1", [userId]);
+    return { worksDeleted: w.rows[0]?.n ?? 0 };
+  }
+  // Файловый режим
+  const users = await getUsers();
+  const target = users.find((u) => u.id === userId);
+  await fileWrite("users.json", { users: users.filter((u) => u.id !== userId) });
+  const worksFile = path.join(DATA_DIR, "works.json");
+  try {
+    const raw = await fs.readFile(worksFile, "utf-8");
+    const store = JSON.parse(raw) as { works: { id: string; userId: string }[]; reviews: { id: string; workId: string; authorId: string }[] };
+    const myWorkIds = new Set(store.works.filter((w) => w.userId === userId).map((w) => w.id));
+    const keptWorks = store.works.filter((w) => w.userId !== userId);
+    const keptReviews = store.reviews.filter((r) => r.authorId !== userId && !myWorkIds.has(r.workId));
+    await fileWrite("works.json", { works: keptWorks, reviews: keptReviews });
+    return { worksDeleted: myWorkIds.size };
+  } catch {
+    return { worksDeleted: 0 };
+  }
 }
 
 /** Коды подтверждения: в БД с TTL или в памяти локально. */

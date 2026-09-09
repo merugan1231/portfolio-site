@@ -26,8 +26,8 @@ export default function LoginPage() {
       setError(body.error ?? "Ошибка входа");
       return;
     }
-    // Админа направляем в панель, обычного пользователя на главную
-    router.push(body.role === "admin" ? "/admin" : "/");
+    // Админ — в панель; без юзернейма — в онбординг; остальные — на главную
+    router.push(body.redirect ?? (body.role === "admin" ? "/admin" : "/"));
     router.refresh();
   };
 

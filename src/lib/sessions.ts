@@ -97,6 +97,18 @@ export async function destroySession(token: string | undefined): Promise<void> {
   }
 }
 
+/** Удалить все сессии пользователя (при удалении аккаунта). */
+export async function destroyUserSessions(userId: string): Promise<void> {
+  if (dbEnabled()) {
+    const { getPool, ensureTablesSafe } = await import("./db");
+    await ensureTablesSafe();
+    await getPool().query("DELETE FROM kv_store WHERE key LIKE 'session:%' AND value->>'userId' = $1", [userId]);
+  } else {
+    const { sessions, codes } = fileReadAll();
+    fileWriteAll(sessions.filter((s) => s.userId !== userId), codes);
+  }
+}
+
 export async function storeCode(entry: Omit<PendingCode, "expiresAt">): Promise<void> {
   const full: PendingCode = { ...entry, expiresAt: Date.now() + CODE_TTL };
   if (dbEnabled()) {

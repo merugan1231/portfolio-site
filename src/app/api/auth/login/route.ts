@@ -29,7 +29,12 @@ export async function POST(request: Request) {
   }
 
   const session = await createSession(user.id);
-  const res = NextResponse.json({ ok: true, role: user.role });
+  // Без юзернейма сначала отправляем в онбординг (юз задают один раз)
+  const res = NextResponse.json({
+    ok: true,
+    role: user.role,
+    redirect: !user.username ? "/onboarding" : user.role === "admin" ? "/admin" : "/",
+  });
   res.cookies.set(SESSION_COOKIE, session.token, {
     httpOnly: true,
     sameSite: "lax",

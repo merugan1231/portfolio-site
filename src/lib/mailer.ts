@@ -8,13 +8,15 @@ type SendResult = { delivered: boolean; devCode?: string; error?: string };
 export async function sendVerificationEmail(
   to: string,
   code: string,
-  purpose: "register" | "login"
+  purpose: "register" | "login" | "delete"
 ): Promise<SendResult> {
   const apiKey = process.env.RESEND_API_KEY;
   const subject =
     purpose === "register"
       ? "Код подтверждения регистрации"
-      : "Код для входа на сайт";
+      : purpose === "delete"
+        ? "Код подтверждения удаления аккаунта"
+        : "Код для входа на сайт";
 
   if (!apiKey) {
     console.log(`[ДЕМО-РЕЖИМ] Код для ${to}: ${code}`);
@@ -38,6 +40,11 @@ export async function sendVerificationEmail(
             <p style="color:#a1a1aa;margin:0 0 24px">Ваш код подтверждения (действует 10 минут):</p>
             <div style="font-size:36px;font-weight:800;letter-spacing:8px;background:#27272a;border-radius:12px;padding:16px 0;text-align:center">${code}</div>
             <p style="color:#71717a;font-size:12px;margin-top:24px">Если вы не запрашивали код — просто проигнорируйте это письмо.</p>
+            ${
+              purpose === "delete"
+                ? '<p style="color:#f87171;font-size:12px;margin-top:12px">Внимание: после подтверждения аккаунт и все его работы будут удалены безвозвратно.</p>'
+                : ""
+            }
           </div>
         `,
       }),

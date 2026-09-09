@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
-import { takeCode, saveUser, findUserByLogin, findUserByUsername } from "@/lib/storage";
-import { newId, USERNAME_RE } from "@/lib/users";
+import { takeCode, saveUser, findUserByLogin } from "@/lib/storage";
+import { newId } from "@/lib/users";
 import { createSession } from "@/lib/sessions";
 import { SESSION_COOKIE } from "@/lib/current-user";
 
+/**
+ * Шаг 2 регистрации: подтверждение кода из письма.
+ * Аккаунт создаётся без юзернейма и имени — их пользователь выберет
+ * в окне онбординга сразу после (юзернейм — один раз и навсегда).
+ */
 export async function POST(request: Request) {
   let body: { target?: string; code?: string };
   try {
@@ -23,15 +28,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Неверный или устаревший код" }, { status: 400 });
   }
 
-  const { login, username, displayName, email, password } = payload as {
-    login: string; username?: string; displayName?: string; email: string; password: string;
-  };
+  const { login, email, password } = payload as { login: string; email: string; password: string };
   if (await findUserByLogin(login)) {
     return NextResponse.json({ error: "Этот логин уже занят" }, { status: 409 });
-  }
-  const finalUsername = (username ?? "").trim();
-  if (!USERNAME_RE.test(finalUsername) || (await findUserByUsername(finalUsername))) {
-    return NextResponse.json({ error: "Юзернейм недоступен или некорректен" }, { status: 409 });
   }
 
   const user = {
@@ -43,13 +42,13 @@ export async function POST(request: Request) {
     role: "user" as const,
     method: "email",
     createdAt: new Date().toISOString(),
-    displayName: (displayName ?? "").trim(),
-    username: finalUsername,
+    displayName: "",
+    username: null,
     avatarEmoji: "🧑‍💻",
     avatarUrl: "",
     bio: "",
     contacts: [],
-    profileUpdatedAt: new Date().toISOString(),
+    profileUpdatedAt: null,
     plan: "free" as const,
     planExpiresAt: null,
     bioDetails: {},
@@ -57,7 +56,8 @@ export async function POST(request: Request) {
   await saveUser(user);
 
   const session = await createSession(user.id);
-  const res = NextResponse.json({ ok: true, role: user.role });
+  // Сразу ведём в онбординг: выбор юзернейма (один раз) и имени
+  const res = NextResponse.json({ ok: true, role: user.role, redirect: "/onboarding" });
   res.cookies.set(SESSION_COOKIE, session.token, {
     httpOnly: true,
     sameSite: "lax",

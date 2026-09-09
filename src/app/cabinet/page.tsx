@@ -17,6 +17,7 @@ type Profile = {
   plan: "free" | "pro";
   isPro: boolean;
   canChangeName: boolean;
+  usernameLocked?: boolean;
   cooldownHours: number;
   memberSince: string;
 };
@@ -64,6 +65,15 @@ export default function CabinetPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Удаление аккаунта
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteSent, setDeleteSent] = useState(false);
+  const [deleteDevCode, setDeleteDevCode] = useState("");
+  const [deleteCode, setDeleteCode] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   // поля формы
   const [username, setUsername] = useState("");
@@ -134,6 +144,43 @@ export default function CabinetPage() {
     load();
   }
 
+  async function sendDeleteCode() {
+    setDeleteError("");
+    setDeleteBusy(true);
+    const res = await fetch("/api/profile/delete", { method: "POST" });
+    const body = await res.json().catch(() => ({}));
+    setDeleteBusy(false);
+    if (!res.ok) {
+      setDeleteError(body.error ?? "Не удалось отправить код");
+      return;
+    }
+    setDeleteSent(true);
+    if (body.devCode) setDeleteDevCode(body.devCode);
+  }
+
+  async function confirmDelete() {
+    setDeleteError("");
+    if (!deleteCode || !deletePassword) {
+      setDeleteError("Введите код из письма и пароль");
+      return;
+    }
+    if (!confirm("Аккаунт, все работы и отзывы будут удалены БЕЗВОЗВРАТНО. Продолжить?")) return;
+    setDeleteBusy(true);
+    const res = await fetch("/api/profile/delete/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: deleteCode, password: deletePassword }),
+    });
+    const body = await res.json().catch(() => ({}));
+    setDeleteBusy(false);
+    if (!res.ok) {
+      setDeleteError(body.error ?? "Не удалось удалить аккаунт");
+      return;
+    }
+    router.push("/");
+    router.refresh();
+  }
+
   const input =
     "w-full rounded-xl border border-white/10 bg-zinc-900/70 px-4 py-3 text-white outline-none transition-colors focus:border-indigo-400";
 
@@ -195,9 +242,17 @@ export default function CabinetPage() {
               <span className="mb-1.5 block text-sm text-zinc-400">
                 Юзернейм <span className="text-zinc-600">(по нему вас найдут: /u/username)</span>
               </span>
-              <input value={username} onChange={(e) => setUsername(e.target.value)} className={input} disabled={!profile.canChangeName} />
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className={input}
+                placeholder="ещё не задан — задайте сейчас"
+                disabled={!!profile.username}
+              />
               <span className="mt-1 block text-xs text-zinc-600">
-                От 5 символов, начинается и заканчивается буквой; внутри — латиница, цифры и _
+                {profile.username
+                  ? "Юзернейм закрепляется за аккаунтом один раз и не меняется."
+                  : "От 5 символов, начинается и заканчивается буквой. Задаётся один раз и не меняется!"}
               </span>
             </label>
             <label className="block">
@@ -330,6 +385,71 @@ export default function CabinetPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Опасная зона: удаление аккаунта */}
+      <div className="card mt-10 border-red-400/20 p-6">
+        <h2 className="font-bold text-white">Удаление аккаунта</h2>
+        <p className="mt-1 text-sm text-zinc-400">
+          Аккаунт, все ваши работы и отзывы будут удалены безвозвратно. Для подтверждения нужны код с вашей
+          почты ({profile.email || "почта не указана"}) и пароль.
+        </p>
+        {!deleteOpen ? (
+          <button onClick={() => setDeleteOpen(true)} className="btn btn-ghost mt-4 text-sm !text-red-400">
+            Я хочу удалить аккаунт
+          </button>
+        ) : (
+          <div className="mt-4 max-w-md space-y-3">
+            {!deleteSent ? (
+              <button onClick={sendDeleteCode} disabled={deleteBusy} className="btn btn-primary text-sm disabled:opacity-50">
+                {deleteBusy ? "Отправляю…" : "1. Получить код на почту"}
+              </button>
+            ) : (
+              <>
+                <p className="text-sm text-lime-300">✅ Код отправлен на {profile.email}</p>
+                {deleteDevCode && (
+                  <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+                    Демо-режим, код: <strong>{deleteDevCode}</strong>
+                  </div>
+                )}
+                <input
+                  value={deleteCode}
+                  onChange={(e) => setDeleteCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  className={`${input} text-center tracking-[0.3em]`}
+                  placeholder="Код из письма"
+                  inputMode="numeric"
+                />
+                <input
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  className={input}
+                  placeholder="Ваш пароль"
+                  autoComplete="current-password"
+                />
+                {deleteError && <p className="text-sm text-red-400">{deleteError}</p>}
+                <div className="flex gap-3">
+                  <button onClick={confirmDelete} disabled={deleteBusy} className="btn btn-primary text-sm !bg-red-500/80 disabled:opacity-50">
+                    {deleteBusy ? "Удаляю…" : "2. Удалить аккаунт навсегда"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDeleteOpen(false);
+                      setDeleteSent(false);
+                      setDeleteCode("");
+                      setDeletePassword("");
+                      setDeleteError("");
+                    }}
+                    className="btn btn-ghost text-sm"
+                  >
+                    Отмена
+                  </button>
+                </div>
+              </>
+            )}
+            {!deleteSent && deleteError && <p className="text-sm text-red-400">{deleteError}</p>}
+          </div>
+        )}
       </div>
     </section>
   );

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { saveUser, findUserByUsername } from "@/lib/storage";
-import { USERNAME_RE, USERNAME_RULE, canChangeProfile, profileCooldownLeft, BIO_DETAIL_IDS, isPro } from "@/lib/users";
+import { USERNAME_RE, USERNAME_RULE, USERNAME_LOCKED_MSG, canChangeProfile, profileCooldownLeft, BIO_DETAIL_IDS, isPro } from "@/lib/users";
 
 type Contact = { label: string; value: string };
 
@@ -25,6 +25,7 @@ export async function GET() {
       planExpiresAt: user.planExpiresAt,
       isPro: isPro(user),
       canChangeName: canChangeProfile(user),
+      usernameLocked: !!user.username, // юзернейм задаётся один раз навсегда
       cooldownHours: Math.ceil(cooldownLeft / 3600000),
       memberSince: user.createdAt, // приватно: только для владельца аккаунта
     },
@@ -53,27 +54,27 @@ export async function PUT(request: Request) {
   const nameLocked = !canChangeProfile(user);
   const next = { ...user };
 
-  // Имя и юзернейм — раз в сутки
+  // Юзернейм: задаётся ОДИН раз, после — не меняется никогда
   if (body.username !== undefined && body.username !== user.username) {
-    if (nameLocked) {
-      return NextResponse.json(
-        { error: `Юзернейм можно менять раз в сутки. Следующая смена через ~${Math.ceil(profileCooldownLeft(user) / 3600000)} ч.` },
-        { status: 429 }
-      );
+    if (user.username) {
+      return NextResponse.json({ error: USERNAME_LOCKED_MSG }, { status: 403 });
     }
     const username = body.username.trim();
     if (!USERNAME_RE.test(username)) {
       return NextResponse.json({ error: `Юзернейм: ${USERNAME_RULE}` }, { status: 400 });
     }
     const taken = await findUserByUsername(username);
-    if (taken && taken.id !== user.id) {
+    if (taken) {
       return NextResponse.json({ error: "Этот юзернейм уже занят" }, { status: 409 });
     }
     next.username = username;
+    next.profileUpdatedAt = new Date().toISOString(); // старт отсчёта суточного кулдауна для имени
   }
 
   if (body.displayName !== undefined && body.displayName !== user.displayName) {
-    if (nameLocked) {
+    // Первая установка имени — без кулдауна; смена уже заданного — раз в сутки
+    const isFirstSetName = !(user.displayName ?? "").trim();
+    if (nameLocked && !isFirstSetName) {
       return NextResponse.json(
         { error: `Имя можно менять раз в сутки. Следующая смена через ~${Math.ceil(profileCooldownLeft(user) / 3600000)} ч.` },
         { status: 429 }
@@ -125,10 +126,6 @@ export async function PUT(request: Request) {
     }
     next.contacts = contacts;
   }
-
-  // Ставим отметку времени только если реально менялись имя/юз
-  const nameChanged = next.username !== user.username || next.displayName !== user.displayName;
-  if (nameChanged) next.profileUpdatedAt = new Date().toISOString();
 
   await saveUser(next);
   return NextResponse.json({ ok: true });

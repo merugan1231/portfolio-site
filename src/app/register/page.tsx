@@ -13,8 +13,6 @@ function RegisterInner() {
 
   const [step, setStep] = useState<Step>("form");
   const [login, setLogin] = useState("");
-  const [username, setUsername] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
@@ -49,7 +47,7 @@ function RegisterInner() {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ login, username, displayName, email, password }),
+      body: JSON.stringify({ login, email, password }),
     });
     const body = await res.json();
     setLoading(false);
@@ -72,7 +70,7 @@ function RegisterInner() {
       return;
     }
     setStep("code");
-  }, [login, username, displayName, email, password, password2]);
+  }, [login, email, password, password2]);
 
   const confirmCode = useCallback(async () => {
     setError("");
@@ -88,7 +86,7 @@ function RegisterInner() {
       setError(body.error ?? "Неверный код");
       return;
     }
-    router.push("/");
+    router.push(body.redirect ?? "/");
     router.refresh();
   }, [email, code, router]);
 
@@ -103,7 +101,7 @@ function RegisterInner() {
           <>
             <h1 className="text-3xl font-extrabold text-white">Регистрация</h1>
             <p className="mt-2 text-sm text-zinc-400">
-              Выберите быстрый способ или создайте аккаунт по email.
+              Выберите быстрый способ или создайте аккаунт по email. Юзернейм выберете сразу после — он закрепляется один раз.
             </p>
 
             {/* Быстрые способы */}
@@ -129,30 +127,6 @@ function RegisterInner() {
                   className={input}
                   placeholder="latinica_123"
                   autoComplete="username"
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1.5 block text-sm text-zinc-400">
-                  Юзернейм <span className="text-zinc-600">(по нему вас найдут: /u/…)</span>
-                </span>
-                <input
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className={input}
-                  placeholder="ivan_dev"
-                  autoComplete="off"
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1.5 block text-sm text-zinc-400">
-                  Имя <span className="text-zinc-600">(высветится над юзернеймом)</span>
-                </span>
-                <input
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className={input}
-                  placeholder="Иван Петров"
-                  autoComplete="name"
                 />
               </label>
               <label className="block">
