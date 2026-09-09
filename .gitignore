@@ -40,6 +40,9 @@ yarn-error.log*
 /data/
 /com.user.portfolio-site.plist
 
+# локальная памятка проекта
+PROJECT-NOTES.md
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

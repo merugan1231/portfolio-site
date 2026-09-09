@@ -73,7 +73,8 @@ export function providerConfig(id: string): ProviderConfig | null {
 }
 
 export function enabledProviders(): ProviderConfig[] {
-  return (["google", "yandex"] as ProviderId[])
+  // Яндекс отключён по решению пользователя (решено оставить только Google)
+  return (["google"] as ProviderId[])
     .map((id) => providerConfig(id))
     .filter((c): c is ProviderConfig => !!c);
 }
