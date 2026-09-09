@@ -15,8 +15,9 @@ export default function Footer() {
         <nav className="flex flex-wrap items-center justify-center gap-5 text-sm text-zinc-400">
           <Link href="/" className="transition-colors hover:text-white">Главная</Link>
           <Link href="/projects" className="transition-colors hover:text-white">Проекты</Link>
-          <Link href="/about" className="transition-colors hover:text-white">Обо мне</Link>
+          <Link href="/about" className="transition-colors hover:text-white">О сервисе</Link>
           <Link href="/contacts" className="transition-colors hover:text-white">Контакты</Link>
+          <Link href="/privacy" className="transition-colors hover:text-white">Конфиденциальность</Link>
           <a
             href="https://t.me/kollew"
             target="_blank"

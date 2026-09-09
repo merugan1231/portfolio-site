@@ -91,9 +91,12 @@ export default async function ProjectsPage() {
         <p className="mt-4 max-w-2xl text-lg text-zinc-400">
           Каждая работа — экспонат полки: год, теги и ссылки. Листайте вниз, как по выставочному залу.
         </p>
-        <div className="mt-6 flex items-center gap-3 text-sm text-zinc-500">
+        <div className="mt-6 flex flex-wrap items-center gap-3 text-sm text-zinc-500">
           <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-lime-300" />
           Экспонатов в зале: {projects.length}
+          <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1 text-xs font-medium text-amber-200">
+            🧪 Демо-версия раздела — оформление и наполнение могут меняться
+          </span>
         </div>
       </div>
 

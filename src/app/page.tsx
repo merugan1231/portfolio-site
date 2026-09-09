@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getRecentVerifiedWorks, getServiceStats, getWorkRating, type Work } from "@/lib/works";
 import { getUsers } from "@/lib/storage";
 import type { StoredUser } from "@/lib/storage";
+import { getCurrentUser } from "@/lib/current-user";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,7 @@ export default async function Home({
   searchParams: Promise<{ welcome?: string }>;
 }) {
   const { welcome } = await searchParams;
+  const me = await getCurrentUser();
 
   // Данные для «живой полки» и цифр сервиса (всё опционально — сайт не падает, если пусто)
   const [stats, recent, users] = await Promise.all([
@@ -116,17 +118,25 @@ export default async function Home({
             Как это работает
           </h2>
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { icon: "👤", title: "1. Кабинет", text: "Регистрируешься, получаешь юзернейм и личный кабинет — и настраиваешь профиль под себя." },
-              { icon: "🗂️", title: "2. Работы", text: "Описываешь работу по пунктам: тип, процесс, команда, стек, вложения, перспектива." },
-              { icon: "🛡️", title: "3. Авторство", text: "Вставляешь уникальный код в README или описание — сервис подтверждает авторство автоматически." },
-              { icon: "⭐", title: "4. Оценки", text: "Получаешь честные оценки: низкие — только с обоснованием, а несправедливые можно оспорить." },
+            {            [
+              { icon: "👤", slug: "cabinet", title: "1. Кабинет", text: "Регистрируешься, получаешь юзернейм и личный кабинет — и настраиваешь профиль под себя." },
+              { icon: "🗂️", slug: "works", title: "2. Работы", text: "Описываешь работу по пунктам: тип, процесс, команда, стек, вложения, перспектива." },
+              { icon: "🛡️", slug: "verify", title: "3. Авторство", text: "Вставляешь уникальный код в README или описание — сервис подтверждает авторство автоматически." },
+              { icon: "⭐", slug: "reviews", title: "4. Оценки", text: "Получаешь честные оценки: низкие — только с обоснованием, а несправедливые можно оспорить." },
             ].map((f, i) => (
-              <div key={f.title} className="card reveal p-6" style={{ transitionDelay: `${i * 80}ms` }}>
+              <Link
+                key={f.slug}
+                href={`/how/${f.slug}`}
+                className="card reveal block p-6 transition-all duration-300 hover:-translate-y-1 hover:!border-lime-300/40"
+                style={{ transitionDelay: `${i * 80}ms` }}
+              >
                 <span className="text-3xl">{f.icon}</span>
                 <h3 className="mt-3 text-lg font-semibold text-white">{f.title}</h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">{f.text}</p>
-              </div>
+                <span className="mt-3 inline-block text-xs font-medium text-lime-300/80 transition-colors group-hover:text-lime-300">
+                  Подробнее →
+                </span>
+              </Link>
             ))}
           </div>
         </div>
@@ -221,9 +231,15 @@ export default async function Home({
               Бесплатно: кабинет, 5 работ, подтверждение авторства и публичный профиль.
               Pro за 499 ₽/мес снимает лимит работ.
             </p>
-            <Link href="/register" className="btn btn-primary relative">
-              Начать бесплатно
-            </Link>
+            {me ? (
+              <Link href="/works/new" className="btn btn-primary relative">
+                Выложить работу →
+              </Link>
+            ) : (
+              <Link href="/register" className="btn btn-primary relative">
+                Начать бесплатно
+              </Link>
+            )}
           </div>
         </div>
       </section>
