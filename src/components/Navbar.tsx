@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 const LINKS = [
   { href: "/", label: "Главная" },
   { href: "/projects", label: "Проекты" },
+  { href: "/explore", label: "Все работы" },
   { href: "/search", label: "Люди" },
   { href: "/about", label: "О сервисе" },
   { href: "/contacts", label: "Контакты" },
@@ -110,7 +111,10 @@ export default function Navbar() {
                   <Link href="/works/new" onClick={() => setMenu(false)} className="block px-4 py-2.5 text-sm text-zinc-300 hover:bg-white/5 hover:text-white">
                     Добавить работу
                   </Link>
-                  {me.role === "admin" && (
+                  <Link href="/tickets" onClick={() => setMenu(false)} className="block px-4 py-2.5 text-sm text-zinc-300 hover:bg-white/5 hover:text-white">
+                    Тикеты
+                  </Link>
+                  {(me.role === "admin" || me.role === "creator") && (
                     <Link href="/admin" onClick={() => setMenu(false)} className="block px-4 py-2.5 text-sm text-zinc-300 hover:bg-white/5 hover:text-white">
                       Админка
                     </Link>

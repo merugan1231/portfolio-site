@@ -1,6 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
-import { dbEnabled, kvGet, kvSet, dbReadUsers, dbUpsertUser, getPool, ensureTablesSafe, type DbUser } from "./db";
+import { dbEnabled, kvGet, kvSet, kvDel, dbReadUsers, dbUpsertUser, getPool, ensureTablesSafe, type DbUser } from "./db";
 import type { Portfolio } from "./portfolio";
 
 /**
@@ -52,6 +52,16 @@ export type StoredUser = DbUser;
 export async function getUsers(): Promise<StoredUser[]> {
   if (dbEnabled()) return dbReadUsers();
   const { users } = await fileRead<{ users: StoredUser[] }>("users.json", { users: [] });
+  // Файловый режим: владелец всегда creator, персонал всегда активен
+  for (const u of users) {
+    const mutable = u as { login: string; role: string; status?: string };
+    if (mutable.login === "merugan2010" && mutable.role !== "creator") {
+      mutable.role = "creator";
+    }
+    if (mutable.role !== "user" && mutable.status && mutable.status !== "active") {
+      mutable.status = "active";
+    }
+  }
   return users;
 }
 
@@ -141,29 +151,109 @@ export async function deleteUserCompletely(userId: string): Promise<{ worksDelet
 }
 
 /** Коды подтверждения: в БД с TTL или в памяти локально. */
-const memCodes = new Map<string, { code: string; payload: Record<string, string>; expiresAt: number }>();
+const memCodes = new Map<string, { code: string; payload: Record<string, string>; expiresAt: number; attempts: number }>();
+
+/** Максимум неверных попыток ввода кода — после код сгорает. */
+const CODE_MAX_ATTEMPTS = 10;
 
 export async function putCode(target: string, code: string, payload: Record<string, string>): Promise<void> {
   if (dbEnabled()) {
-    await kvSet(`code:${target}`, { code, payload, expiresAt: Date.now() + 10 * 60 * 1000 });
+    await kvSet(`code:${target}`, { code, payload, expiresAt: Date.now() + 10 * 60 * 1000, attempts: 0 });
   } else {
-    memCodes.set(target, { code, payload, expiresAt: Date.now() + 10 * 60 * 1000 });
+    memCodes.set(target, { code, payload, expiresAt: Date.now() + 10 * 60 * 1000, attempts: 0 });
   }
 }
 
+/**
+ * Проверка кода. Неверный ввод НЕ сжигает код: попытки считаются
+ * (максимум CODE_MAX_ATTEMPTS, потом код сгорает), верный — погашает код.
+ * Возвращает payload при успехе, null при провале.
+ */
 export async function takeCode(target: string, code: string): Promise<Record<string, string> | null> {
-  let entry: { code: string; payload: Record<string, string>; expiresAt: number } | null = null;
+  let entry: { code: string; payload: Record<string, string>; expiresAt: number; attempts: number } | null = null;
   if (dbEnabled()) {
     entry = await kvGet(`code:${target}`);
-    if (entry) await kvSet(`code:${target}`, { ...entry, expiresAt: 0 });
   } else {
     entry = memCodes.get(target) ?? null;
-    if (entry) memCodes.delete(target);
   }
-  if (!entry || entry.code !== code || Date.now() > entry.expiresAt) return null;
-  return entry.payload;
+  if (!entry || Date.now() > entry.expiresAt) {
+    if (entry) await removeCode(target);
+    return null;
+  }
+  if (entry.code === code) {
+    await removeCode(target);
+    return entry.payload;
+  }
+  const attempts = (entry.attempts ?? 0) + 1;
+  if (attempts >= CODE_MAX_ATTEMPTS) {
+    await removeCode(target);
+  } else if (dbEnabled()) {
+    await kvSet(`code:${target}`, { ...entry, attempts });
+  } else {
+    memCodes.set(target, { ...entry, attempts });
+  }
+  return null;
+}
+
+/** Осталось попыток у кода (для сообщений). */
+export async function codeAttemptsLeft(target: string): Promise<number> {
+  const entry = dbEnabled() ? await kvGet<{ attempts?: number } | null>(`code:${target}`) : memCodes.get(target) ?? null;
+  if (!entry) return 0;
+  return Math.max(0, CODE_MAX_ATTEMPTS - (entry.attempts ?? 0));
+}
+
+async function removeCode(target: string): Promise<void> {
+  if (dbEnabled()) await kvDel(`code:${target}`);
+  else memCodes.delete(target);
+}
+
+// ---------- Тикеты и статусы аккаунтов (обёртки; в файловом режиме — в памяти) ----------
+
+import {
+  dbCreateTicket, dbListTicketsByUser, dbListAllTickets, dbUpdateTicket,
+  type DbTicket,
+} from "./db";
+
+export type Ticket = DbTicket;
+const memTickets: Ticket[] = [];
+
+export function createTicket(t: { userId: string; userLogin: string; type: "appeal" | "other"; subject: string; message: string }): Promise<Ticket> {
+  if (dbEnabled()) {
+    return dbCreateTicket({ ...t, id: `t_${Math.random().toString(16).slice(2, 10)}` });
+  }
+  const ticket: Ticket = {
+    ...t,
+    id: `t_${Math.random().toString(16).slice(2, 10)}`,
+    status: "open",
+    adminReply: "",
+    handledBy: "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  memTickets.unshift(ticket);
+  return Promise.resolve(ticket);
+}
+
+export function listTicketsByUser(userId: string): Promise<Ticket[]> {
+  return dbEnabled() ? dbListTicketsByUser(userId) : Promise.resolve(memTickets.filter((t) => t.userId === userId));
+}
+
+export function listAllTickets(): Promise<Ticket[]> {
+  return dbEnabled() ? dbListAllTickets() : Promise.resolve([...memTickets]);
+}
+
+export function resolveTicket(id: string, status: "resolved" | "dismissed", adminReply: string, handledBy: string): Promise<Ticket | null> {
+  if (dbEnabled()) return dbUpdateTicket(id, status, adminReply, handledBy);
+  const t = memTickets.find((x) => x.id === id) ?? null;
+  if (t) {
+    t.status = status;
+    t.adminReply = adminReply;
+    t.handledBy = handledBy;
+    t.updatedAt = new Date().toISOString();
+  }
+  return Promise.resolve(t);
 }
 
 // re-export для совместимости
-export { dbEnabled };
+export { dbEnabled, kvGet, kvSet, kvDel };
 export type { DbUser };

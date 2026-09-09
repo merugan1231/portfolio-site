@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { getActiveUser } from "@/lib/current-user";
 import { getUsers, saveUser } from "@/lib/storage";
 import { isPro } from "@/lib/users";
 import { dbEnabled, dbGetPromoCode, dbRedeemPromoCode } from "@/lib/db";
@@ -10,7 +10,7 @@ import { dbEnabled, dbGetPromoCode, dbRedeemPromoCode } from "@/lib/db";
  * Если у пользователя Pro уже активен — дни прибавляются к сроку.
  */
 export async function POST(request: Request) {
-  const user = await getCurrentUser();
+  const user = await getActiveUser();
   if (!user) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
   let body: { code?: string };

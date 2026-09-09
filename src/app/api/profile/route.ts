@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { getActiveUser } from "@/lib/current-user";
 import { saveUser, findUserByUsername } from "@/lib/storage";
 import { USERNAME_RE, USERNAME_RULE, USERNAME_LOCKED_MSG, canChangeProfile, profileCooldownLeft, BIO_DETAIL_IDS, USER_ROLE_IDS, MAX_USER_ROLES, isPro } from "@/lib/users";
 
 type Contact = { label: string; value: string };
 
 export async function GET() {
-  const user = await getCurrentUser();
+  const user = await getActiveUser();
   if (!user) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
   const cooldownLeft = profileCooldownLeft(user);
@@ -34,7 +34,7 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
-  const user = await getCurrentUser();
+  const user = await getActiveUser();
   if (!user) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
   let body: {

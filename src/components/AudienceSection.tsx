@@ -1,0 +1,176 @@
+"use client";
+
+import { useState } from "react";
+
+/**
+ * «Для кого DevShelf»: клик по специальности открывает модальное окно
+ * с описанием — что это, кому подходит и что можно выкладывать.
+ */
+
+type Audience = {
+  chip: string;
+  emoji: string;
+  title: string;
+  what: string;
+  whatFor: string;
+  examples: string[];
+};
+
+export const AUDIENCE: Audience[] = [
+  {
+    chip: "Программисты",
+    emoji: "💻",
+    title: "Программисты",
+    what: "Разработчики любого стека — от пет-проектов на Python до продакшен-систем на TypeScript, Go или Rust.",
+    whatFor: "Собираете портфолио с подтверждённым авторством, получаете честные оценки сообщества и находите заказчиков или команду.",
+    examples: ["CLI-утилиты и библиотеки", "Компиляторы и интерпретаторы", "Игровые движки", "Open source вклад"],
+  },
+  {
+    chip: "OSINT-специалисты",
+    emoji: "🔍",
+    title: "OSINT-специалисты",
+    what: "Аналитики открытых источников: расследования, деанонимизация, анализ данных и инфраструктуры.",
+    whatFor: "Публикуете кейсы, подтверждаете авторство методики и наработок, показываете уровень потенциальным работодателям.",
+    examples: ["Расследования и кейсы", "Инструменты сбора данных", "Отчёты по инфраструктуре", "Методики верификации"],
+  },
+  {
+    chip: "Кейсисты",
+    emoji: "📋",
+    title: "Кейсисты",
+    what: "Те, кто описывает опыт: разборы задач, тестирование сервисов, аналитические материалы.",
+    whatFor: "Оформляете работу по пунктам — процесс, результат, выводы — и получаете подтверждаемую витрину своего опыта.",
+    examples: ["Разборы проектов", "Тестирование сервисов", "Аналитические отчёты", "Учебные материалы"],
+  },
+  {
+    chip: "Иллюстраторы",
+    emoji: "🎨",
+    title: "Иллюстраторы и 2D-художники",
+    what: "Художники, работающие в цифре: иллюстрации, персонажи, обложки, концепты.",
+    whatFor: "Выкладываете серии работ со ссылками на арты, подтверждаете авторство и собираете обратную связь.",
+    examples: ["Иллюстрации и обложки", "Персонажи и концепты", "Комиксы", "Стикеры и эмодзи"],
+  },
+  {
+    chip: "Веб-разработка",
+    emoji: "🌐",
+    title: "Веб-разработка",
+    what: "Сайты и веб-приложения: лендинги, магазины, SaaS, порталы на любом фреймворке.",
+    whatFor: "Показываете живой сайт ссылкой, описываете стек и процесс, подтверждаете авторство кодом в репозитории.",
+    examples: ["Лендинги и сайты", "Интернет-магазины", "SaaS-сервисы", "Корпоративные порталы"],
+  },
+  {
+    chip: "Telegram-боты",
+    emoji: "🤖",
+    title: "Telegram-боты",
+    what: "Боты любого назначения: магазины, модерация, игры, автоматизация рутины.",
+    whatFor: "Ссылка на бота плюс описание архитектуры — всё в одной карточке с подтверждением авторства.",
+    examples: ["Магазины и платежи", "Боты-модераторы", "Игры и развлечения", "Уведомления и интеграции"],
+  },
+  {
+    chip: "Мобильные приложения",
+    emoji: "📱",
+    title: "Мобильные приложения",
+    what: "Приложения для iOS и Android: нативные, кроссплатформенные, гибридные.",
+    whatFor: "Ссылки на сторы или APK, скриншоты и описание архитектуры в одном месте.",
+    examples: ["Нативные приложения", "Flutter/React Native", "Игры под мобильные", "Утилиты и виджеты"],
+  },
+  {
+    chip: "Дизайн",
+    emoji: "✨",
+    title: "Дизайн",
+    what: "UI/UX, брендинг, графика для интерфейсов и маркетинга.",
+    whatFor: "Кейсы «до/после», макеты в Figma, айдентика — с подтверждением авторства и оценками клиентов.",
+    examples: ["UI/UX-кейсы", "Логотипы и айдентика", "Дизайн-системы", "Промо-графика"],
+  },
+  {
+    chip: "Скрипты и автоматизация",
+    emoji: "⚙️",
+    title: "Скрипты и автоматизация",
+    what: "Парсеры, боты-помощники, пайплайны, скрипты для рутины — всё, что экономит время.",
+    whatFor: "Показываете код и результат: сколько часов сэкономлено, какие данные собраны.",
+    examples: ["Парсеры и краулеры", "Автотесты", "CI/CD-пайплайны", "Рабочие скрипты"],
+  },
+  {
+    chip: "Дашборды",
+    emoji: "📊",
+    title: "Дашборды",
+    what: "Визуализация данных: панели метрик, мониторинг, интерактивные отчёты.",
+    whatFor: "Демонстрируете работу с данными: сбор, обработка, наглядное представление.",
+    examples: ["Панели метрик", "Мониторинг сервисов", "BI-отчёты", "Интерактивные карты"],
+  },
+  {
+    chip: "Аналитика",
+    emoji: "🧠",
+    title: "Аналитика",
+    what: "Исследования данных: ML-модели, статистика, бизнес-выводы.",
+    whatFor: "Публикуете исследования с methodology и результатами — подтверждая авторство.",
+    examples: ["ML-модели", "A/B-тесты", "Статистические исследования", "Прогнозы"],
+  },
+  {
+    chip: "И всё, что можно показать",
+    emoji: "🚀",
+    title: "И всё, что можно показать",
+    what: "DevShelf не ограничивает тип работ. Если это можно описать и подтвердить — место найдётся.",
+    whatFor: "Музыка, видео, методички, железо, исследования — выбирайте «Свой вариант» типа и описывайте по пунктам.",
+    examples: ["Музыка и подкасты", "Видео и монтаж", "Учебные курсы", "Железные проекты"],
+  },
+];
+
+export function AudienceSection() {
+  const [open, setOpen] = useState<Audience | null>(null);
+
+  return (
+    <section className="mx-auto w-full max-w-6xl px-6 py-20">
+      <h2 className="reveal text-3xl font-bold tracking-tight text-white sm:text-4xl">
+        Для кого DevShelf
+      </h2>
+      <div className="mt-8 flex flex-wrap gap-3">
+        {AUDIENCE.map((a, i) => (
+          <button
+            key={a.chip}
+            onClick={() => setOpen(a)}
+            className="reveal card cursor-pointer px-4 py-2 text-sm font-medium text-zinc-200 transition-colors hover:!border-lime-300/50 hover:text-white"
+            style={{ transitionDelay: `${i * 40}ms` }}
+          >
+            {a.emoji} {a.chip}
+          </button>
+        ))}
+      </div>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          onClick={() => setOpen(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="card relative max-h-[85vh] w-full max-w-lg overflow-y-auto p-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setOpen(null)}
+              className="absolute right-4 top-4 text-xl text-zinc-500 transition-colors hover:text-white"
+              aria-label="Закрыть"
+            >
+              ✕
+            </button>
+            <div className="text-4xl">{open.emoji}</div>
+            <h3 className="mt-3 text-2xl font-extrabold text-white">{open.title}</h3>
+            <p className="mt-4 text-sm leading-relaxed text-zinc-300">{open.what}</p>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-400">{open.whatFor}</p>
+            <div className="mt-5">
+              <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Что выкладывают</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {open.examples.map((ex) => (
+                  <span key={ex} className="rounded-full border border-lime-300/25 bg-lime-300/10 px-3 py-1 text-xs text-lime-200">
+                    {ex}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}

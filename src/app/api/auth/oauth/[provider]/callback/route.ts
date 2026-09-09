@@ -82,6 +82,9 @@ export async function GET(
       planExpiresAt: null,
       bioDetails: {},
       roles: [],
+      status: "active" as const,
+      statusReason: "",
+      statusAt: null,
     };
     await saveUser(user);
   }

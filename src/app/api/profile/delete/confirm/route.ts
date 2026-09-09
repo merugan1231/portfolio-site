@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser, SESSION_COOKIE } from "@/lib/current-user";
+import { getActiveUser, SESSION_COOKIE } from "@/lib/current-user";
 import { takeCode, deleteUserCompletely } from "@/lib/storage";
 import { hashPassword } from "@/lib/users";
 
@@ -8,7 +8,7 @@ import { hashPassword } from "@/lib/users";
  * затем безвозвратно удаляем аккаунт, все его работы и отзывы.
  */
 export async function POST(request: Request) {
-  const user = await getCurrentUser();
+  const user = await getActiveUser();
   if (!user) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
   let body: { code?: string; password?: string };

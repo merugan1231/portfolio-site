@@ -56,6 +56,11 @@ export default function CabinetPage() {
       router.push("/login");
       return;
     }
+    // Замороженным/заблокированным кабинет не открывается — ведём на тикеты
+    if (me.user.status === "frozen" || me.user.status === "blocked") {
+      router.push("/tickets");
+      return;
+    }
     const pRes = await fetch("/api/profile");
     const p = await pRes.json();
     if (p.profile) setProfile(p.profile);

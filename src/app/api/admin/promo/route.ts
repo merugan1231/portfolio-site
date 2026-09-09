@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/current-user";
+import { isCreator } from "@/lib/users";
 import { dbEnabled, dbCreatePromoCode, dbListPromoCodes, dbGetPromoCode } from "@/lib/db";
 
-/** Список промокодов (последние 100) — только для админа. */
+/** Список промокодов (последние 100) — только для creator. */
 export async function GET() {
   const me = await getCurrentUser();
-  if (me?.role !== "admin") {
-    return NextResponse.json({ error: "Доступ только для администратора" }, { status: 403 });
+  if (!isCreator(me)) {
+    return NextResponse.json({ error: "Промокоды управляет только создатель сервиса" }, { status: 403 });
   }
   if (!dbEnabled()) {
     return NextResponse.json({ promoCodes: [] });
@@ -15,11 +16,11 @@ export async function GET() {
   return NextResponse.json({ promoCodes });
 }
 
-/** Создание промокода: код и срок подписки в днях выбирает админ. */
+/** Создание промокода: код и срок подписки в днях выбирает создатель. */
 export async function POST(request: Request) {
   const me = await getCurrentUser();
-  if (me?.role !== "admin") {
-    return NextResponse.json({ error: "Доступ только для администратора" }, { status: 403 });
+  if (!isCreator(me)) {
+    return NextResponse.json({ error: "Промокоды управляет только создатель сервиса" }, { status: 403 });
   }
   if (!dbEnabled()) {
     return NextResponse.json({ error: "Промокоды работают только на сервере с базой" }, { status: 503 });
@@ -48,6 +49,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Такой промокод уже существует" }, { status: 409 });
   }
 
-  await dbCreatePromoCode({ code, days, createdBy: me.login, createdAt: new Date().toISOString(), usedBy: null, usedAt: null, note });
+  await dbCreatePromoCode({ code, days, createdBy: me!.login, createdAt: new Date().toISOString(), usedBy: null, usedAt: null, note });
   return NextResponse.json({ ok: true, code, days });
 }

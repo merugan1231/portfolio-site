@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { getActiveUser } from "@/lib/current-user";
 import { getWork, updateWork, getUserWorks, autoVerify, getWorkReviews, getWorkRating } from "@/lib/works";
 
 /** Публичный просмотр работы: данные + отзывы + рейтинг (без verify-токена). */
@@ -8,7 +8,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const work = await getWork(id);
   if (!work) return NextResponse.json({ error: "Работа не найдена" }, { status: 404 });
 
-  const viewer = await getCurrentUser();
+  const viewer = await getActiveUser();
   const [reviews, rating] = await Promise.all([getWorkReviews(id), getWorkRating(id)]);
   const { verifyToken, ...publicWork } = work;
   void verifyToken;
@@ -16,7 +16,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 }
 
 async function getOwnedWork(id: string) {
-  const user = await getCurrentUser();
+  const user = await getActiveUser();
   if (!user) return { error: "Не авторизован", status: 401 as const };
   const work = await getWork(id);
   if (!work) return { error: "Работа не найдена", status: 404 as const };

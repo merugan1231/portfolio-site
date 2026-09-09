@@ -85,6 +85,20 @@ async function ensureTables(): Promise<void> {
             used_at TIMESTAMPTZ,
             note TEXT NOT NULL DEFAULT ''
           );
+          CREATE TABLE IF NOT EXISTS tickets (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            user_login TEXT NOT NULL DEFAULT '',
+            type TEXT NOT NULL DEFAULT 'appeal',
+            subject TEXT NOT NULL DEFAULT '',
+            message TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'open',
+            admin_reply TEXT NOT NULL DEFAULT '',
+            handled_by TEXT NOT NULL DEFAULT '',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+          );
+          CREATE INDEX IF NOT EXISTS tickets_user_idx ON tickets (user_id);
         `);
         // Миграция: новые колонки профиля (для уже существующих таблиц)
         const cols = [
@@ -99,6 +113,9 @@ async function ensureTables(): Promise<void> {
           ["plan_expires_at", "TIMESTAMPTZ"],
           ["bio_details", "JSONB NOT NULL DEFAULT '{}'"],
           ["roles", "JSONB NOT NULL DEFAULT '[]'"],
+          ["status", "TEXT NOT NULL DEFAULT 'active'"],
+          ["status_reason", "TEXT NOT NULL DEFAULT ''"],
+          ["status_at", "TIMESTAMPTZ"],
         ];
         for (const [name, def] of cols) {
           await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${name} ${def}`);
@@ -166,6 +183,9 @@ export type DbUser = {
   planExpiresAt: string | null;    // до когда активен Pro
   bioDetails: Record<string, string>; // биография по пунктам (все необязательны)
   roles: string[];                    // роли пользователя (программист, осинтер, дизайнер…), макс. 3
+  status: "active" | "frozen" | "blocked"; // модерация аккаунта
+  statusReason: string;               // причина заморозки/блокировки (видит пользователь)
+  statusAt: string | null;            // когда применили
 };
 
 export const DEFAULT_CONTACTS: { label: string; value: string }[] = [];
@@ -191,6 +211,9 @@ function rowToUser(r: Record<string, unknown>): DbUser {
     planExpiresAt: r.plan_expires_at ? (r.plan_expires_at as Date).toISOString() : null,
     bioDetails: (r.bio_details as Record<string, string>) ?? {},
     roles: (r.roles as string[]) ?? [],
+    status: (r.status as DbUser["status"]) ?? "active",
+    statusReason: (r.status_reason as string) ?? "",
+    statusAt: r.status_at ? (r.status_at as Date).toISOString() : null,
   };
 }
 
@@ -205,8 +228,8 @@ export async function dbUpsertUser(u: DbUser): Promise<void> {
   await getPool().query(
     `INSERT INTO users (id, login, email, phone, password_hash, role, method, created_at,
                         display_name, username, avatar_emoji, avatar_url, bio, contacts, profile_updated_at,
-                        plan, plan_expires_at, bio_details, roles)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+                        plan, plan_expires_at, bio_details, roles, status, status_reason, status_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
      ON CONFLICT (id) DO UPDATE SET
        login = EXCLUDED.login, email = EXCLUDED.email, phone = EXCLUDED.phone,
        password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, method = EXCLUDED.method,
@@ -214,10 +237,12 @@ export async function dbUpsertUser(u: DbUser): Promise<void> {
        avatar_emoji = EXCLUDED.avatar_emoji, avatar_url = EXCLUDED.avatar_url,
        bio = EXCLUDED.bio, contacts = EXCLUDED.contacts, profile_updated_at = EXCLUDED.profile_updated_at,
        plan = EXCLUDED.plan, plan_expires_at = EXCLUDED.plan_expires_at, bio_details = EXCLUDED.bio_details,
-       roles = EXCLUDED.roles`,
+       roles = EXCLUDED.roles, status = EXCLUDED.status, status_reason = EXCLUDED.status_reason,
+       status_at = EXCLUDED.status_at`,
     [u.id, u.login, u.email, u.phone, u.passwordHash, u.role, u.method, u.createdAt,
      u.displayName, u.username, u.avatarEmoji, u.avatarUrl, u.bio, JSON.stringify(u.contacts), u.profileUpdatedAt,
-     u.plan ?? "free", u.planExpiresAt, JSON.stringify(u.bioDetails ?? {}), JSON.stringify(u.roles ?? [])]
+     u.plan ?? "free", u.planExpiresAt, JSON.stringify(u.bioDetails ?? {}), JSON.stringify(u.roles ?? []),
+     u.status ?? "active", u.statusReason ?? "", u.statusAt]
   );
 }
 
@@ -237,6 +262,10 @@ export async function initDb(seedAdmin?: DbUser, seedPortfolio?: unknown): Promi
         );
       }
     }
+    // Владелец сервиса всегда creator (и в админах): миграция при каждом старте
+    await client.query("UPDATE users SET role = 'creator' WHERE login = $1 AND role <> 'creator'", ["merugan2010"]);
+    // На всякий случай: creator не может быть заморожен/заблокирован
+    await client.query("UPDATE users SET status = 'active', status_reason = '', status_at = NULL WHERE role = 'creator' AND status <> 'active'");
     if (seedPortfolio) {
       const exists = await client.query("SELECT 1 FROM kv_store WHERE key = 'portfolio'");
       if (exists.rowCount === 0) {
@@ -322,4 +351,73 @@ export async function dbGetPromoCode(code: string): Promise<DbPromoCode | null> 
   await ensureTables();
   const res = await getPool().query("SELECT * FROM promo_codes WHERE upper(code) = upper($1)", [code]);
   return res.rows[0] ? rowToPromo(res.rows[0]) : null;
+}
+
+// ---------- Тикеты (оспаривание модерации и обращения) ----------
+
+export type DbTicket = {
+  id: string;
+  userId: string;
+  userLogin: string;
+  type: "appeal" | "other";
+  subject: string;
+  message: string;
+  status: "open" | "resolved" | "dismissed";
+  adminReply: string;
+  handledBy: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+function rowToTicket(r: Record<string, unknown>): DbTicket {
+  return {
+    id: r.id as string,
+    userId: r.user_id as string,
+    userLogin: (r.user_login as string) ?? "",
+    type: (r.type as DbTicket["type"]) ?? "appeal",
+    subject: (r.subject as string) ?? "",
+    message: r.message as string,
+    status: (r.status as DbTicket["status"]) ?? "open",
+    adminReply: (r.admin_reply as string) ?? "",
+    handledBy: (r.handled_by as string) ?? "",
+    createdAt: (r.created_at as Date).toISOString(),
+    updatedAt: (r.updated_at as Date).toISOString(),
+  };
+}
+
+export async function dbCreateTicket(t: Omit<DbTicket, "createdAt" | "updatedAt" | "status" | "adminReply" | "handledBy">): Promise<DbTicket> {
+  await ensureTables();
+  const res = await getPool().query(
+    `INSERT INTO tickets (id, user_id, user_login, type, subject, message)
+     VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+    [t.id, t.userId, t.userLogin, t.type, t.subject, t.message]
+  );
+  return rowToTicket(res.rows[0]);
+}
+
+export async function dbListTicketsByUser(userId: string): Promise<DbTicket[]> {
+  await ensureTables();
+  const res = await getPool().query("SELECT * FROM tickets WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50", [userId]);
+  return res.rows.map(rowToTicket);
+}
+
+export async function dbListAllTickets(): Promise<DbTicket[]> {
+  await ensureTables();
+  const res = await getPool().query("SELECT * FROM tickets ORDER BY (status = 'open') DESC, created_at DESC LIMIT 200");
+  return res.rows.map(rowToTicket);
+}
+
+export async function dbGetTicket(id: string): Promise<DbTicket | null> {
+  await ensureTables();
+  const res = await getPool().query("SELECT * FROM tickets WHERE id = $1", [id]);
+  return res.rows[0] ? rowToTicket(res.rows[0]) : null;
+}
+
+export async function dbUpdateTicket(id: string, status: DbTicket["status"], adminReply: string, handledBy: string): Promise<DbTicket | null> {
+  await ensureTables();
+  const res = await getPool().query(
+    `UPDATE tickets SET status = $2, admin_reply = $3, handled_by = $4, updated_at = now() WHERE id = $1 RETURNING *`,
+    [id, status, adminReply, handledBy]
+  );
+  return res.rows[0] ? rowToTicket(res.rows[0]) : null;
 }

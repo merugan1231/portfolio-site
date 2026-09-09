@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { getActiveUser } from "@/lib/current-user";
 import { getWork, getWorkReviews, createReview, getWorkRating } from "@/lib/works";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -13,7 +13,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const user = await getCurrentUser();
+  const user = await getActiveUser();
   if (!user) return NextResponse.json({ error: "Войдите, чтобы оставить отзыв" }, { status: 401 });
 
   const work = await getWork(id);

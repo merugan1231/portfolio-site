@@ -264,6 +264,47 @@ export async function getRecentVerifiedWorks(limit = 8): Promise<Work[]> {
     .slice(0, limit);
 }
 
+/**
+ * Все подтверждённые работы (для раздела «Все работы» с поиском).
+ * q — поиск по названию/описанию/стеку; type — фильтр по типу работы.
+ */
+export async function getAllVerifiedWorks(q = "", type = "", limit = 200): Promise<Work[]> {
+  const needle = q.trim().toLowerCase();
+  const map = new Map<string, Work>();
+  const push = (w: Work) => {
+    if (needle) {
+      const hay = `${w.title} ${w.summary} ${w.details} ${w.stack} ${w.typeCustom ?? ""}`.toLowerCase();
+      if (!hay.includes(needle)) return;
+    }
+    if (type && w.type !== type) return;
+    map.set(w.id, w);
+  };
+  if (dbEnabled()) {
+    await ensureTablesSafe();
+    const res = await getPool().query(
+      "SELECT * FROM works WHERE verify_status = 'verified' ORDER BY created_at DESC LIMIT $1",
+      [limit]
+    );
+    res.rows.map(rowToWork).forEach(push);
+  } else {
+    const store = await fileRead();
+    store.works.filter((w) => w.verifyStatus === "verified").forEach(push);
+  }
+  return [...map.values()];
+}
+
+/** Авторы работ (login+username) для подписей в разделе всех работ. */
+export async function getWorkAuthors(userIds: string[]): Promise<Record<string, { username: string | null; displayName: string }>> {
+  const { getUsers } = await import("./storage");
+  const users = await getUsers();
+  const map: Record<string, { username: string | null; displayName: string }> = {};
+  for (const id of [...new Set(userIds)]) {
+    const u = users.find((x) => x.id === id);
+    if (u) map[id] = { username: u.username, displayName: u.displayName || u.username || u.login };
+  }
+  return map;
+}
+
 /** Публичные цифры сервиса для главной. */
 export async function getServiceStats(): Promise<{
   users: number;

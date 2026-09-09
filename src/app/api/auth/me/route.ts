@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/current-user";
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ user: null });
+  const status = user.status ?? "active";
   return NextResponse.json({
     user: {
       id: user.id,
@@ -17,10 +18,13 @@ export async function GET() {
       bio: user.bio,
       roles: user.roles ?? [],
       plan: user.plan ?? "free",
-      isPro: (user.plan === "pro" && (!user.planExpiresAt || new Date(user.planExpiresAt).getTime() > Date.now())),
+      isPro: user.plan === "pro" && (!user.planExpiresAt || new Date(user.planExpiresAt).getTime() > Date.now()),
       needsProfile: !user.username || !(user.displayName ?? "").trim(),
       // Онбординг нужен только тем, у кого ещё не закреплён юзернейм
       needsUsername: !user.username,
+      status,
+      statusReason: user.statusReason ?? "",
+      statusLabel: status === "frozen" ? "заморожен" : status === "blocked" ? "заблокирован" : "активен",
     },
   });
 }

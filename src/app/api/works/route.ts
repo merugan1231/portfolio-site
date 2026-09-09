@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { getActiveUser } from "@/lib/current-user";
 import { createWork, updateWork, getUserWorks, getWork, getWorkRating, getWorkReviews, autoVerify, newVerifyToken, WORK_TYPES, type WorkType, type WorkLink } from "@/lib/works";
 import { FREE_WORK_LIMIT, isPro } from "@/lib/users";
 
@@ -19,7 +19,7 @@ function cleanLinks(raw: unknown): WorkLink[] {
 }
 
 export async function GET() {
-  const user = await getCurrentUser();
+  const user = await getActiveUser();
   if (!user) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
   const works = await getUserWorks(user.id);
@@ -30,7 +30,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const user = await getCurrentUser();
+  const user = await getActiveUser();
   if (!user) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
   let body: Record<string, unknown>;

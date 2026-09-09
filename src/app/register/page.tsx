@@ -90,6 +90,33 @@ function RegisterInner() {
     router.refresh();
   }, [email, code, router]);
 
+  const [resending, setResending] = useState(false);
+  const [resendLeft, setResendLeft] = useState(0);
+  useEffect(() => {
+    if (resendLeft <= 0) return;
+    const t = setTimeout(() => setResendLeft((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendLeft]);
+
+  const resendCode = useCallback(async () => {
+    setError("");
+    setResending(true);
+    const res = await fetch("/api/auth/resend", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target: email.trim().toLowerCase() }),
+    });
+    const body = await res.json().catch(() => ({}));
+    setResending(false);
+    if (!res.ok) {
+      setError(body.error ?? "Не удалось отправить код повторно");
+      return;
+    }
+    if (body.devCode) setDevCode(body.devCode);
+    else if (body.delivered) setInfo("Новый код отправлен на вашу почту.");
+    setResendLeft(60);
+  }, [email]);
+
   const input =
     "w-full rounded-xl border border-white/10 bg-zinc-900/70 px-4 py-3 text-white outline-none transition-colors focus:border-indigo-400";
 
@@ -199,6 +226,13 @@ function RegisterInner() {
             ) : null}
             <button onClick={confirmCode} disabled={loading} className="btn btn-primary mt-6 w-full">
               {loading ? "Проверяю…" : "Подтвердить и войти"}
+            </button>
+            <button
+              onClick={resendCode}
+              disabled={resending || resendLeft > 0}
+              className="mt-3 w-full text-center text-sm text-lime-300 transition-colors hover:text-lime-200 disabled:cursor-not-allowed disabled:text-zinc-600"
+            >
+              {resending ? "Отправляю…" : resendLeft > 0 ? `Отправить код повторно можно через ${resendLeft} с` : "Не пришло письмо? Отправить код повторно"}
             </button>
             <button
               onClick={() => {

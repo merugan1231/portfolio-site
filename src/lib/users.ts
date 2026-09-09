@@ -1,7 +1,26 @@
 import { createHash, randomBytes, randomInt } from "crypto";
 import type { StoredUser } from "./storage";
 
-export type Role = "admin" | "user";
+export type Role = "creator" | "admin" | "user";
+
+/** Логин владельца сервиса — главный администратор (creator). */
+export const CREATOR_LOGIN = "merugan2010";
+
+export type AccountStatus = "active" | "frozen" | "blocked";
+
+export const STATUS_LABELS: Record<AccountStatus, string> = {
+  active: "активен",
+  frozen: "заморожен",
+  blocked: "заблокирован",
+};
+
+export function isStaff(u: { role?: string | null } | null | undefined): boolean {
+  return u?.role === "creator" || u?.role === "admin";
+}
+
+export function isCreator(u: { role?: string | null } | null | undefined): boolean {
+  return u?.role === "creator";
+}
 
 export type User = StoredUser;
 

@@ -3,6 +3,7 @@ import { getRecentVerifiedWorks, getServiceStats, getWorkRating, type Work } fro
 import { getUsers } from "@/lib/storage";
 import type { StoredUser } from "@/lib/storage";
 import { getCurrentUser } from "@/lib/current-user";
+import { AudienceSection } from "@/components/AudienceSection";
 
 export const dynamic = "force-dynamic";
 
@@ -197,27 +198,8 @@ export default async function Home({
         </div>
       </section>
 
-      {/* Для кого сервис */}
-      <section className="mx-auto w-full max-w-6xl px-6 py-20">
-        <h2 className="reveal text-3xl font-bold tracking-tight text-white sm:text-4xl">
-          Для кого DevShelf
-        </h2>
-        <div className="mt-8 flex flex-wrap gap-3">
-          {[
-            "Программисты", "OSINT-специалисты", "Кейсисты", "Иллюстраторы",
-            "Веб-разработка", "Telegram-боты", "Мобильные приложения", "Дизайн",
-            "Скрипты и автоматизация", "Дашборды", "Аналитика", "И всё, что можно показать",
-          ].map((s, i) => (
-            <span
-              key={s}
-              className="reveal card cursor-default px-4 py-2 text-sm font-medium text-zinc-200 hover:!border-lime-300/50"
-              style={{ transitionDelay: `${i * 40}ms` }}
-            >
-              {s}
-            </span>
-          ))}
-        </div>
-      </section>
+      {/* Для кого сервис: клик по чипсу открывает описание */}
+      <AudienceSection />
 
       {/* CTA */}
       <section className="border-t border-white/10 py-20">

@@ -15,6 +15,24 @@ type AdminUser = {
   createdAt: string;
   plan?: "free" | "pro";
   isPro?: boolean;
+  status: "active" | "frozen" | "blocked";
+  statusReason: string;
+  statusAt: string | null;
+  username: string | null;
+};
+
+type Ticket = {
+  id: string;
+  userId: string;
+  userLogin: string;
+  type: "appeal" | "other";
+  subject: string;
+  message: string;
+  status: "open" | "resolved" | "dismissed";
+  adminReply: string;
+  handledBy: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 const newProject = (): Project => ({
@@ -55,10 +73,12 @@ type PromoCode = {
 export default function AdminPage() {
   const router = useRouter();
   const [me, setMe] = useState<Me | null | undefined>(undefined);
-  const [tab, setTab] = useState<"portfolio" | "users" | "moderation" | "promo">("portfolio");
+  const [tab, setTab] = useState<"portfolio" | "users" | "moderation" | "promo" | "tickets">("portfolio");
   const [disputed, setDisputed] = useState<DisputedReview[]>([]);
   const [worksPending, setWorksPending] = useState<PendingWork[]>([]);
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [myRole, setMyRole] = useState("user");
 
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
@@ -72,18 +92,22 @@ export default function AdminPage() {
 
   const loadAll = useCallback(async () => {
     const s = await fetch("/api/auth/me").then((r) => r.json());
-    setMe(s.user && s.user.role === "admin" ? s.user : null);
-    const [d, u, m, p] = await Promise.all([
+    const isStaffUser = !!s.user && (s.user.role === "admin" || s.user.role === "creator");
+    setMe(isStaffUser ? s.user : null);
+    if (isStaffUser) setMyRole(s.user.role);
+    const [d, u, m, p, t] = await Promise.all([
       fetch("/api/portfolio").then((r) => r.json()),
       fetch("/api/admin/users").then((r) => (r.ok ? r.json() : { users: [] })),
       fetch("/api/admin/moderation").then((r) => (r.ok ? r.json() : { disputed: [], worksPending: [] })),
       fetch("/api/admin/promo").then((r) => (r.ok ? r.json() : { promoCodes: [] })),
+      fetch("/api/admin/tickets").then((r) => (r.ok ? r.json() : { tickets: [] })),
     ]);
     setData(d);
     setUsers(u.users ?? []);
     setDisputed(m.disputed ?? []);
     setWorksPending(m.worksPending ?? []);
     setPromoCodes(p.promoCodes ?? []);
+    setTickets(t.tickets ?? []);
   }, []);
 
   useEffect(() => {
@@ -142,6 +166,54 @@ export default function AdminPage() {
     });
     loadAll();
   }, [loadAll]);
+
+  // ---- Модерация статусов (заморозка/блокировка с причиной) ----
+  const [statusTarget, setStatusTarget] = useState<AdminUser | null>(null);
+  const [statusKind, setStatusKind] = useState<"frozen" | "blocked">("frozen");
+  const [statusReason, setStatusReason] = useState("");
+  const [statusError, setStatusError] = useState("");
+  const [statusBusy, setStatusBusy] = useState(false);
+
+  const applyStatus = useCallback(
+    async (userId: string, status: "frozen" | "blocked" | "active", reason: string) => {
+      setStatusBusy(true);
+      setStatusError("");
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_status", userId, status, reason }),
+      });
+      const body = await res.json().catch(() => ({}));
+      setStatusBusy(false);
+      if (!res.ok) {
+        setStatusError(body.error ?? "Не удалось изменить статус");
+        return false;
+      }
+      setStatusTarget(null);
+      loadAll();
+      return true;
+    },
+    [loadAll]
+  );
+
+  const setUserStatus = useCallback(
+    (userId: string, status: "active", reason: string) => {
+      void applyStatus(userId, status, reason);
+    },
+    [applyStatus]
+  );
+
+  const setUserRole = useCallback(
+    async (userId: string, role: "admin" | "user") => {
+      await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_role", userId, role }),
+      });
+      loadAll();
+    },
+    [loadAll]
+  );
 
   if (me === undefined || (me && !data)) {
     return (
@@ -235,7 +307,10 @@ export default function AdminPage() {
             ["portfolio", "Портфолио"],
             ["users", `Пользователи (${users.length})`],
             ["moderation", `Модерация (${disputed.length + worksPending.length})`],
-            ["promo", `Промокоды (${promoCodes.filter((c) => !c.usedBy).length})`],
+            ["tickets", `Тикеты (${tickets.filter((t) => t.status === "open").length})`],
+            ...(myRole === "creator"
+              ? [["promo", `Промокоды (${promoCodes.filter((c) => !c.usedBy).length})`] as const]
+              : []),
           ] as const
         ).map(([key, label]) => (
           <button
@@ -396,35 +471,62 @@ export default function AdminPage() {
           </section>
         </>
       ) : (
-        /* ---- Пользователи ---- */
-        <section className="card overflow-hidden">
+        /* ---- Пользователи: тариф, статус, роли администрации ---- */
+        <section className="card overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-white/10 text-xs uppercase tracking-wider text-zinc-500">
-                <th className="px-6 py-4">Логин</th>
-                <th className="px-6 py-4">Email</th>
-                <th className="px-6 py-4">Роль</th>
-                <th className="px-6 py-4">Тариф</th>
-                <th className="px-6 py-4">Дата</th>
+                <th className="px-4 py-4">Логин</th>
+                <th className="px-4 py-4">Email</th>
+                <th className="px-4 py-4">Роль</th>
+                <th className="px-4 py-4">Статус</th>
+                <th className="px-4 py-4">Тариф</th>
+                <th className="px-4 py-4">Действия</th>
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
+              {users.map((u) => {
+                const isCreatorRow = u.role === "creator";
+                const canTouch = !isCreatorRow && u.id !== me?.login;
+                return (
                 <tr
                   key={u.id}
-                  className="border-b border-white/5 text-zinc-300 transition-colors last:border-0 hover:bg-white/[0.03]"
+                  className="border-b border-white/5 align-top text-zinc-300 transition-colors last:border-0 hover:bg-white/[0.03]"
                 >
-                  <td className="px-6 py-4 font-medium text-white">
+                  <td className="px-4 py-4 font-medium text-white">
                     {u.login}
-                    {u.role === "admin" ? (
-                      <span className="ml-2 rounded-md bg-lime-300/10 px-2 py-0.5 text-xs text-lime-300">
-                        админ
-                      </span>
-                    ) : null}
+                    {isCreatorRow && (
+                      <span className="ml-2 rounded-md bg-violet-400/15 px-2 py-0.5 text-xs text-violet-300">создатель</span>
+                    )}
+                    {u.role === "admin" && (
+                      <span className="ml-2 rounded-md bg-lime-300/10 px-2 py-0.5 text-xs text-lime-300">админ</span>
+                    )}
                   </td>
-                  <td className="px-6 py-4 text-zinc-400">{u.email || "—"}</td>
-                  <td className="px-6 py-4">{u.role === "admin" ? "Администратор" : "Пользователь"}</td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-4 text-zinc-400">{u.email || "—"}</td>
+                  <td className="px-4 py-4">
+                    {u.role === "creator" ? "Создатель" : u.role === "admin" ? "Администратор" : "Пользователь"}
+                    {myRole === "creator" && canTouch && (
+                      <div className="mt-1">
+                        <button
+                          onClick={() => setUserRole(u.id, u.role === "admin" ? "user" : "admin")}
+                          className="text-xs text-zinc-500 underline-offset-2 transition-colors hover:text-lime-300 hover:underline"
+                        >
+                          {u.role === "admin" ? "снять админа" : "выдать админа"}
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-4">
+                    {u.status === "active" && <span className="text-lime-400">активен</span>}
+                    {u.status === "frozen" && <span className="text-amber-300">заморожен</span>}
+                    {u.status === "blocked" && <span className="text-red-400">заблокирован</span>}
+                    {u.statusReason && (
+                      <div className="mt-1 max-w-40 text-xs text-zinc-500" title={u.statusReason}>
+                        {u.statusReason}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-4">
                     {u.isPro ? (
                       <span className="flex items-center gap-2">
                         <span className="rounded-md bg-amber-300/10 px-2 py-0.5 text-xs text-amber-300">Pro</span>
@@ -444,14 +546,53 @@ export default function AdminPage() {
                       </button>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-zinc-500">
-                    {new Date(u.createdAt).toLocaleDateString("ru-RU")}
+                  <td className="px-4 py-4">
+                    {canTouch ? (
+                      <div className="flex flex-col gap-1">
+                        {u.status === "active" ? (
+                          <button
+                            onClick={() => {
+                              const target = users.find((x) => x.id === u.id);
+                              setStatusTarget(target ?? null);
+                              setStatusKind("frozen");
+                              setStatusReason("");
+                            }}
+                            className="text-left text-xs text-amber-300/90 underline-offset-2 hover:text-amber-200 hover:underline"
+                          >
+                            🧊 заморозить
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setUserStatus(u.id, "active", "")}
+                            className="text-left text-xs text-lime-300 underline-offset-2 hover:text-lime-200 hover:underline"
+                          >
+                            ♻️ разморозить
+                          </button>
+                        )}
+                        {myRole === "creator" && u.status !== "blocked" && (
+                          <button
+                            onClick={() => {
+                              const target = users.find((x) => x.id === u.id);
+                              setStatusTarget(target ?? null);
+                              setStatusKind("blocked");
+                              setStatusReason("");
+                            }}
+                            className="text-left text-xs text-red-400 underline-offset-2 hover:text-red-300 hover:underline"
+                          >
+                            🔒 заблокировать
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-zinc-600">—</span>
+                    )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-zinc-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-zinc-500">
                     Пока никто не зарегистрировался
                   </td>
                 </tr>              ) : null}
@@ -468,7 +609,120 @@ export default function AdminPage() {
         />
       )}
 
-      {tab === "promo" && <PromoTab codes={promoCodes} onAction={loadAll} />}
+      {tab === "promo" && myRole === "creator" && <PromoTab codes={promoCodes} onAction={loadAll} />}
+
+      {tab === "tickets" && <TicketsTab tickets={tickets} onAction={loadAll} />}
+
+      {/* Модалка причины заморозки/блокировки */}
+      {statusTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="card w-full max-w-md p-6">
+            <h3 className="text-lg font-bold text-white">
+              {statusKind === "blocked" ? "🔒 Заблокировать" : "🧊 Заморозить"} пользователя {statusTarget.login}
+            </h3>
+            <p className="mt-2 text-sm text-zinc-400">
+              {statusKind === "blocked"
+                ? "Заблокированный не может войти и пользоваться сервисом. Причину увидит при попытке входа."
+                : "Замороженный может войти, чтобы подать тикет, но не может пользоваться сервисом. Причину увидит в кабинете."}
+            </p>
+            <textarea
+              value={statusReason}
+              onChange={(e) => setStatusReason(e.target.value)}
+              placeholder="Причина (минимум 10 символов) — её увидит пользователь…"
+              className="mt-4 min-h-24 w-full rounded-xl border border-white/10 bg-zinc-900/70 px-4 py-3 text-white outline-none transition-colors focus:border-indigo-400"
+            />
+            {statusError && <p className="mt-2 text-sm text-red-400">{statusError}</p>}
+            <div className="mt-4 flex gap-3">
+              <button
+                onClick={() => applyStatus(statusTarget.id, statusKind, statusReason.trim())}
+                disabled={statusBusy}
+                className={`btn text-sm ${statusKind === "blocked" ? "!bg-red-500/80" : "!bg-amber-500/80"} disabled:opacity-50`}
+              >
+                {statusBusy ? "Применяю…" : statusKind === "blocked" ? "Заблокировать" : "Заморозить"}
+              </button>
+              <button
+                onClick={() => {
+                  setStatusTarget(null);
+                  setStatusError("");
+                }}
+                className="btn btn-ghost text-sm"
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TicketsTab({ tickets, onAction }: { tickets: Ticket[]; onAction: () => void }) {
+  const [reply, setReply] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+
+  async function handle(id: string, status: "resolved" | "dismissed") {
+    setBusy(id);
+    await fetch(`/api/tickets/${id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status, reply: reply || undefined }),
+    });
+    setBusy(null);
+    setReply("");
+    onAction();
+  }
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold text-white">Тикеты пользователей</h2>
+      <p className="text-sm text-zinc-500">
+        Оспаривания модерации и обращения. Ответ увидит автор тикета на странице «Тикеты».
+      </p>
+      {tickets.length === 0 && <p className="text-sm text-zinc-500">Тикетов пока нет 🎉</p>}
+      {tickets.map((t) => (
+        <div key={t.id} className="card p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <span className="font-semibold text-white">{t.subject}</span>
+              <span className="ml-2 text-sm text-zinc-500">от {t.userLogin}</span>
+              {t.type === "appeal" && (
+                <span className="ml-2 rounded-md bg-amber-300/10 px-2 py-0.5 text-xs text-amber-300">оспаривание</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {t.status === "open" && <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-1 text-xs text-amber-200">открыт</span>}
+              {t.status === "resolved" && <span className="rounded-full border border-lime-300/30 bg-lime-300/10 px-2.5 py-1 text-xs text-lime-200">решён</span>}
+              {t.status === "dismissed" && <span className="rounded-full border border-zinc-500/30 bg-zinc-500/10 px-2.5 py-1 text-xs text-zinc-400">отклонён</span>}
+              <span className="text-xs text-zinc-600">{new Date(t.createdAt).toLocaleString("ru-RU")}</span>
+            </div>
+          </div>
+          <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-300">{t.message}</p>
+          {t.adminReply && (
+            <p className="mt-2 rounded-lg border border-indigo-400/20 bg-indigo-500/10 p-3 text-sm text-indigo-200">
+              Ответ ({t.handledBy}): {t.adminReply}
+            </p>
+          )}
+          {t.status === "open" && (
+            <div className="mt-3">
+              <input
+                value={reply}
+                onChange={(e) => setReply(e.target.value)}
+                placeholder="Ответ пользователю (необязательно)"
+                className="w-full rounded-xl border border-white/10 bg-zinc-900/70 px-4 py-2.5 text-sm text-white outline-none transition-colors focus:border-indigo-400"
+              />
+              <div className="mt-2 flex gap-3">
+                <button disabled={busy === t.id} onClick={() => handle(t.id, "resolved")} className="btn btn-primary !py-2 text-xs">
+                  ✅ Решён
+                </button>
+                <button disabled={busy === t.id} onClick={() => handle(t.id, "dismissed")} className="btn btn-ghost !py-2 text-xs !text-red-400">
+                  ❌ Отклонить
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }

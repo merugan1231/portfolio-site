@@ -202,7 +202,29 @@ export default function CabinetPage() {
     }
     setDeleteSent(true);
     if (body.devCode) setDeleteDevCode(body.devCode);
+    setDeleteResendLeft(60);
   }
+
+  async function resendDeleteCode() {
+    setDeleteError("");
+    setDeleteBusy(true);
+    const res = await fetch("/api/profile/delete/resend", { method: "POST" });
+    const body = await res.json().catch(() => ({}));
+    setDeleteBusy(false);
+    if (!res.ok) {
+      setDeleteError(body.error ?? "Не удалось отправить код повторно");
+      return;
+    }
+    if (body.devCode) setDeleteDevCode(body.devCode);
+    setDeleteResendLeft(60);
+  }
+
+  const [deleteResendLeft, setDeleteResendLeft] = useState(0);
+  useEffect(() => {
+    if (deleteResendLeft <= 0) return;
+    const t = setTimeout(() => setDeleteResendLeft((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [deleteResendLeft]);
 
   async function confirmDelete() {
     setDeleteError("");
@@ -519,6 +541,13 @@ export default function CabinetPage() {
             ) : (
               <>
                 <p className="text-sm text-lime-300">✅ Код отправлен на {profile.email}</p>
+                <button
+                  onClick={resendDeleteCode}
+                  disabled={deleteBusy || deleteResendLeft > 0}
+                  className="text-left text-sm text-lime-300 transition-colors hover:text-lime-200 disabled:cursor-not-allowed disabled:text-zinc-600"
+                >
+                  {deleteResendLeft > 0 ? `Отправить повторно можно через ${deleteResendLeft} с` : "Не пришло письмо? Отправить код повторно"}
+                </button>
                 {deleteDevCode && (
                   <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
                     Демо-режим, код: <strong>{deleteDevCode}</strong>
