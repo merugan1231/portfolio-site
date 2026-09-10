@@ -20,6 +20,7 @@ type Me = {
   username: string | null;
   avatarEmoji: string;
   avatarUrl: string;
+  isPro?: boolean;
 } | null;
 
 function Avatar({ me, size }: { me: NonNullable<Me>; size: number }) {
@@ -85,7 +86,19 @@ export default function Navbar() {
               Вход
             </Link>
           ) : (
-            <div className="relative ml-3">
+            <div className="ml-3 flex items-center gap-2">
+              {/* Pro: приобрести или продлить */}
+              <Link
+                href="/pro-payment"
+                className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all duration-300 hover:-translate-y-0.5 ${
+                  me.isPro
+                    ? "border-amber-300/40 bg-amber-300/10 text-amber-200 hover:bg-amber-300/20"
+                    : "border-amber-300/40 bg-gradient-to-r from-amber-400/20 to-orange-400/20 text-amber-200 hover:from-amber-400/30 hover:to-orange-400/30"
+                }`}
+              >
+                {me.isPro ? "⭐ Продлить Pro" : "⭐ Преобрести Pro"}
+              </Link>
+              <div className="relative">
               <button
                 onClick={() => setMenu(!menu)}
                 className="flex items-center gap-2 rounded-full border border-white/10 py-1 pl-1 pr-3 transition-colors hover:bg-white/5"
@@ -124,6 +137,7 @@ export default function Navbar() {
                   </button>
                 </div>
               )}
+              </div>
             </div>
           )}
         </nav>
@@ -181,6 +195,15 @@ export default function Navbar() {
                 )}
                 <Link href="/works/new" onClick={() => setOpen(false)} className="rounded-xl px-4 py-3 text-base text-zinc-300 transition-colors hover:bg-white/5 hover:text-white">
                   ➕ Добавить работу
+                </Link>
+                <Link
+                  href="/pro-payment"
+                  onClick={() => setOpen(false)}
+                  className={`rounded-xl px-4 py-3 text-base font-medium transition-colors ${
+                    me.isPro ? "text-amber-200 hover:bg-amber-400/10" : "bg-gradient-to-r from-amber-400/15 to-orange-400/15 text-amber-200 hover:from-amber-400/25"
+                  }`}
+                >
+                  {me.isPro ? "⭐ Продлить Pro" : "⭐ Преобрести Pro"}
                 </Link>
                 <Link href="/tickets" onClick={() => setOpen(false)} className="rounded-xl px-4 py-3 text-base text-zinc-300 transition-colors hover:bg-white/5 hover:text-white">
                   🎫 Тикеты

@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
+type ProviderInfo = { id: string; label: string };
 
 export default function LoginPage() {
   const router = useRouter();
@@ -10,6 +12,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [providers, setProviders] = useState<ProviderInfo[]>([]);
+
+  useEffect(() => {
+    fetch("/api/auth/providers")
+      .then((r) => r.json())
+      .then((d) => setProviders(d.providers ?? []))
+      .catch(() => {});
+  }, []);
 
   const submit = async () => {
     setError("");
@@ -68,8 +78,24 @@ export default function LoginPage() {
           </p>
         ) : null}
 
+        {/* Быстрый вход через провайдеров */}
+        {providers.length > 0 && (
+          <>
+            <div className="my-5 flex items-center gap-3 text-xs text-zinc-600">
+              <span className="h-px flex-1 bg-white/10" /> или быстро <span className="h-px flex-1 bg-white/10" />
+            </div>
+            <div className="space-y-2.5">
+              {providers.map((p) => (
+                <a key={p.id} href={`/api/auth/oauth/${p.id}`} className="btn btn-ghost w-full text-sm">
+                  {p.label}
+                </a>
+              ))}
+            </div>
+          </>
+        )}
+
         <button onClick={submit} disabled={loading} className="btn btn-primary mt-6 w-full">
-          {loading ? "Вхожу…" : "Войти"}
+          {loading ? "Вхожу…" : "Войти по паролю"}
         </button>
 
         <p className="mt-6 text-center text-sm text-zinc-500">
