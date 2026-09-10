@@ -116,6 +116,22 @@ async function ensureTables(): Promise<void> {
             updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
           );
           CREATE INDEX IF NOT EXISTS username_requests_user_idx ON username_requests (user_id);
+          CREATE TABLE IF NOT EXISTS payment_receipts (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            user_login TEXT NOT NULL DEFAULT '',
+            amount INTEGER NOT NULL DEFAULT 499,
+            months INTEGER NOT NULL DEFAULT 1,
+            payer_name TEXT NOT NULL DEFAULT '',
+            receipt_url TEXT NOT NULL DEFAULT '',
+            comment TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'pending',
+            admin_reply TEXT NOT NULL DEFAULT '',
+            handled_by TEXT NOT NULL DEFAULT '',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+          );
+          CREATE INDEX IF NOT EXISTS payment_receipts_user_idx ON payment_receipts (user_id);
         `);
         // Миграция: новые колонки профиля (для уже существующих таблиц)
         const cols = [
@@ -526,4 +542,77 @@ export async function dbUpdateUsernameRequest(id: string, status: DbUsernameRequ
     [id, status, adminReply, handledBy]
   );
   return res.rows[0] ? rowToUsernameRequest(res.rows[0]) : null;
+}
+
+// ---------- Заявки на Pro с чеком об оплате ----------
+
+export type DbPaymentReceipt = {
+  id: string;
+  userId: string;
+  userLogin: string;
+  amount: number;          // рубли
+  months: number;          // на сколько месяцев Pro
+  payerName: string;       // имя плательщика (как в переводе)
+  receiptUrl: string;      // ссылка на скрин чека
+  comment: string;
+  status: "pending" | "approved" | "rejected";
+  adminReply: string;
+  handledBy: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+function rowToPaymentReceipt(r: Record<string, unknown>): DbPaymentReceipt {
+  return {
+    id: r.id as string,
+    userId: r.user_id as string,
+    userLogin: (r.user_login as string) ?? "",
+    amount: (r.amount as number) ?? 499,
+    months: (r.months as number) ?? 1,
+    payerName: (r.payer_name as string) ?? "",
+    receiptUrl: (r.receipt_url as string) ?? "",
+    comment: (r.comment as string) ?? "",
+    status: (r.status as DbPaymentReceipt["status"]) ?? "pending",
+    adminReply: (r.admin_reply as string) ?? "",
+    handledBy: (r.handled_by as string) ?? "",
+    createdAt: (r.created_at as Date).toISOString(),
+    updatedAt: (r.updated_at as Date).toISOString(),
+  };
+}
+
+export async function dbCreatePaymentReceipt(t: Omit<DbPaymentReceipt, "status" | "adminReply" | "handledBy" | "createdAt" | "updatedAt">): Promise<DbPaymentReceipt> {
+  await ensureTables();
+  const res = await getPool().query(
+    `INSERT INTO payment_receipts (id, user_id, user_login, amount, months, payer_name, receipt_url, comment)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+    [t.id, t.userId, t.userLogin, t.amount, t.months, t.payerName, t.receiptUrl, t.comment]
+  );
+  return rowToPaymentReceipt(res.rows[0]);
+}
+
+export async function dbListPaymentReceipts(): Promise<DbPaymentReceipt[]> {
+  await ensureTables();
+  const res = await getPool().query("SELECT * FROM payment_receipts ORDER BY (status = 'pending') DESC, created_at DESC LIMIT 200");
+  return res.rows.map(rowToPaymentReceipt);
+}
+
+export async function dbListPaymentReceiptsByUser(userId: string): Promise<DbPaymentReceipt[]> {
+  await ensureTables();
+  const res = await getPool().query("SELECT * FROM payment_receipts WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10", [userId]);
+  return res.rows.map(rowToPaymentReceipt);
+}
+
+export async function dbGetPaymentReceipt(id: string): Promise<DbPaymentReceipt | null> {
+  await ensureTables();
+  const res = await getPool().query("SELECT * FROM payment_receipts WHERE id = $1", [id]);
+  return res.rows[0] ? rowToPaymentReceipt(res.rows[0]) : null;
+}
+
+export async function dbUpdatePaymentReceipt(id: string, status: DbPaymentReceipt["status"], adminReply: string, handledBy: string): Promise<DbPaymentReceipt | null> {
+  await ensureTables();
+  const res = await getPool().query(
+    `UPDATE payment_receipts SET status = $2, admin_reply = $3, handled_by = $4, updated_at = now() WHERE id = $1 RETURNING *`,
+    [id, status, adminReply, handledBy]
+  );
+  return res.rows[0] ? rowToPaymentReceipt(res.rows[0]) : null;
 }

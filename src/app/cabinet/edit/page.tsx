@@ -584,12 +584,9 @@ export default function CabinetPage() {
                     Без лимита работ (на free — максимум 5) и приоритетная проверка авторства.
                   </p>
                 </div>
-                <button
-                  onClick={() => setNotice("Оплату подключим в ближайшее время — напишите нам в Telegram, оформим Pro вручную.")}
-                  className="btn btn-primary text-sm"
-                >
-                  Оформить Pro
-                </button>
+                <Link href="/pro-payment" className="btn btn-primary text-sm">
+                  Оформить Pro →
+                </Link>
               </div>
               <div className="mt-4 flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
                 <span className="text-sm text-zinc-400">Есть промокод?</span>

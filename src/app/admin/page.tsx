@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Portfolio, Project } from "@/lib/portfolio";
+import PaymentsTab from "./PaymentsTab";
 
 type Me = { login: string; role: string; email: string } | null;
 type AdminUser = {
@@ -86,15 +87,19 @@ type UsernameRequest = {
   updatedAt: string;
 };
 
+export type { PaymentReceipt } from "./types";
+import type { PaymentReceipt } from "./types";
+
 export default function AdminPage() {
   const router = useRouter();
   const [me, setMe] = useState<Me | null | undefined>(undefined);
-  const [tab, setTab] = useState<"portfolio" | "users" | "moderation" | "promo" | "tickets" | "usernames">("portfolio");
+  const [tab, setTab] = useState<"portfolio" | "users" | "moderation" | "promo" | "tickets" | "usernames" | "payments">("portfolio");
   const [disputed, setDisputed] = useState<DisputedReview[]>([]);
   const [worksPending, setWorksPending] = useState<PendingWork[]>([]);
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [usernameRequests, setUsernameRequests] = useState<UsernameRequest[]>([]);
+  const [paymentReceipts, setPaymentReceipts] = useState<PaymentReceipt[]>([]);
   const [myRole, setMyRole] = useState("user");
 
   const [login, setLogin] = useState("");
@@ -112,13 +117,14 @@ export default function AdminPage() {
     const isStaffUser = !!s.user && (s.user.role === "admin" || s.user.role === "creator");
     setMe(isStaffUser ? s.user : null);
     if (isStaffUser) setMyRole(s.user.role);
-    const [d, u, m, p, t, ur] = await Promise.all([
+    const [d, u, m, p, t, ur, pay] = await Promise.all([
       fetch("/api/portfolio").then((r) => r.json()),
       fetch("/api/admin/users").then((r) => (r.ok ? r.json() : { users: [] })),
       fetch("/api/admin/moderation").then((r) => (r.ok ? r.json() : { disputed: [], worksPending: [] })),
       fetch("/api/admin/promo").then((r) => (r.ok ? r.json() : { promoCodes: [] })),
       fetch("/api/admin/tickets").then((r) => (r.ok ? r.json() : { tickets: [] })),
       fetch("/api/admin/username-requests").then((r) => (r.ok ? r.json() : { requests: [] })),
+      fetch("/api/admin/pro-payment").then((r) => (r.ok ? r.json() : { receipts: [] })),
     ]);
     setData(d);
     setUsers(u.users ?? []);
@@ -127,6 +133,7 @@ export default function AdminPage() {
     setPromoCodes(p.promoCodes ?? []);
     setTickets(t.tickets ?? []);
     setUsernameRequests(ur.requests ?? []);
+    setPaymentReceipts(pay.receipts ?? []);
   }, []);
 
   useEffect(() => {
@@ -364,6 +371,7 @@ export default function AdminPage() {
               ["moderation", `Модерация (${disputed.length + worksPending.length})`],
               ["tickets", `Тикеты (${tickets.filter((t) => t.status === "open").length})`],
               ["usernames", `Юзернеймы (${usernameRequests.filter((r) => r.status === "open").length})`],
+              ["payments", `Оплаты (${paymentReceipts.filter((r) => r.status === "pending").length})`],
               ...(myRole === "creator"
                 ? [["promo", `Промокоды (${promoCodes.filter((c) => !c.usedBy).length})`] as const]
                 : []),
@@ -689,6 +697,8 @@ export default function AdminPage() {
       {tab === "tickets" && <TicketsTab tickets={tickets} onAction={loadAll} />}
 
       {tab === "usernames" && <UsernameRequestsTab requests={usernameRequests} onAction={loadAll} />}
+
+      {tab === "payments" && <PaymentsTab receipts={paymentReceipts} onAction={loadAll} />}
 
       {/* Модалка смены юзернейма */}
       {usernameTarget && (

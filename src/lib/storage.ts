@@ -230,6 +230,10 @@ import {
   dbCreateUsernameRequest, dbListUsernameRequests, dbListUsernameRequestsByUser, dbUpdateUsernameRequest,
   type DbUsernameRequest,
 } from "./db";
+import {
+  dbCreatePaymentReceipt, dbListPaymentReceipts, dbListPaymentReceiptsByUser, dbGetPaymentReceipt, dbUpdatePaymentReceipt,
+  type DbPaymentReceipt,
+} from "./db";
 
 export type Ticket = DbTicket;
 const memTickets: Ticket[] = [];
@@ -308,6 +312,51 @@ export function listUsernameRequestsByUser(userId: string): Promise<DbUsernameRe
 export function updateUsernameRequest(id: string, status: DbUsernameRequest["status"], adminReply: string, handledBy: string): Promise<DbUsernameRequest | null> {
   if (dbEnabled()) return dbUpdateUsernameRequest(id, status, adminReply, handledBy);
   const r = memUsernameRequests.find((x) => x.id === id) ?? null;
+  if (r) {
+    r.status = status;
+    r.adminReply = adminReply;
+    r.handledBy = handledBy;
+    r.updatedAt = new Date().toISOString();
+  }
+  return Promise.resolve(r);
+}
+
+// ---------- Заявки на Pro с чеком (обёртки; в файловом режиме — в памяти) ----------
+
+const memPaymentReceipts: DbPaymentReceipt[] = [];
+
+export function createPaymentReceipt(t: { id: string; userId: string; userLogin: string; amount: number; months: number; payerName: string; receiptUrl: string; comment: string }): Promise<DbPaymentReceipt> {
+  if (dbEnabled()) return dbCreatePaymentReceipt(t);
+  const r: DbPaymentReceipt = {
+    ...t,
+    status: "pending",
+    adminReply: "",
+    handledBy: "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  memPaymentReceipts.unshift(r);
+  return Promise.resolve(r);
+}
+
+export function listPaymentReceipts(): Promise<DbPaymentReceipt[]> {
+  if (dbEnabled()) return dbListPaymentReceipts();
+  return Promise.resolve([...memPaymentReceipts].sort((a, b) => Number(b.status === "pending") - Number(a.status === "pending")));
+}
+
+export function listPaymentReceiptsByUser(userId: string): Promise<DbPaymentReceipt[]> {
+  if (dbEnabled()) return dbListPaymentReceiptsByUser(userId);
+  return Promise.resolve(memPaymentReceipts.filter((r) => r.userId === userId));
+}
+
+export function getPaymentReceipt(id: string): Promise<DbPaymentReceipt | null> {
+  if (dbEnabled()) return dbGetPaymentReceipt(id);
+  return Promise.resolve(memPaymentReceipts.find((r) => r.id === id) ?? null);
+}
+
+export function updatePaymentReceipt(id: string, status: DbPaymentReceipt["status"], adminReply: string, handledBy: string): Promise<DbPaymentReceipt | null> {
+  if (dbEnabled()) return dbUpdatePaymentReceipt(id, status, adminReply, handledBy);
+  const r = memPaymentReceipts.find((x) => x.id === id) ?? null;
   if (r) {
     r.status = status;
     r.adminReply = adminReply;
