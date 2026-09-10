@@ -1,6 +1,38 @@
 import { createHash, randomBytes, randomInt } from "crypto";
 import type { StoredUser } from "./storage";
 
+/**
+ * Простой rate-limit в памяти процесса: окно на ключ (IP+логин).
+ * Защита от перебора паролей и спама кодами. На serverless — per-instance,
+ * что всё равно резко удорожает атаку.
+ */
+const buckets = new Map<string, { count: number; resetAt: number }>();
+
+export function rateLimit(key: string, limit: number, windowMs: number): { ok: boolean; retryAfterSec: number } {
+  const now = Date.now();
+  const b = buckets.get(key);
+  if (!b || now > b.resetAt) {
+    buckets.set(key, { count: 1, resetAt: now + windowMs });
+    if (buckets.size > 5000) {
+      // чистим устаревшие, чтобы память не текла
+      for (const [k, v] of buckets) if (now > v.resetAt) buckets.delete(k);
+    }
+    return { ok: true, retryAfterSec: 0 };
+  }
+  b.count += 1;
+  if (b.count > limit) {
+    return { ok: false, retryAfterSec: Math.max(1, Math.ceil((b.resetAt - now) / 1000)) };
+  }
+  return { ok: true, retryAfterSec: 0 };
+}
+
+/** IP запроса (за прокси Vercel — из x-forwarded-for). */
+export function clientIp(request: Request): string {
+  const fwd = request.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0].trim();
+  return request.headers.get("x-real-ip")?.trim() || "unknown";
+}
+
 export type Role = "creator" | "admin" | "user";
 
 /** Логин владельца сервиса — главный администратор (creator). */

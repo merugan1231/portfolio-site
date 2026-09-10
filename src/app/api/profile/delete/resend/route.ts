@@ -1,15 +1,24 @@
 import { NextResponse } from "next/server";
 import { getActiveUser } from "@/lib/current-user";
 import { putCode, kvGet, kvSet } from "@/lib/storage";
-import { generateCode } from "@/lib/users";
+import { generateCode, rateLimit, clientIp } from "@/lib/users";
 import { sendVerificationEmail } from "@/lib/mailer";
 
 /** Повторная отправка кода удаления аккаунта. Кулдаун 60 секунд. */
-export async function POST() {
+export async function POST(request: Request) {
   const user = await getActiveUser();
   if (!user) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
   if (!user.email) {
     return NextResponse.json({ error: "У аккаунта нет почты" }, { status: 400 });
+  }
+
+  // Rate-limit повторных отправок: 5 в 10 минут с одного IP
+  const rl = rateLimit(`delresend:${clientIp(request)}`, 5, 10 * 60 * 1000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: `Слишком много запросов. Попробуйте через ${Math.ceil(rl.retryAfterSec / 60)} мин.` },
+      { status: 429 }
+    );
   }
 
   const key = `code:delete:${user.id}`;

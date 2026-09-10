@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { findUserByLogin, findUserByEmail, putCode } from "@/lib/storage";
-import { hashPassword, generateCode } from "@/lib/users";
+import { hashPassword, generateCode, rateLimit, clientIp } from "@/lib/users";
 import { sendVerificationEmail } from "@/lib/mailer";
 
 /**
@@ -28,6 +28,22 @@ export async function POST(request: Request) {
   }
   if (password.length < 8) {
     return NextResponse.json({ error: "Пароль минимум 8 символов" }, { status: 400 });
+  }
+  // Пароль не должен совпадать с логином/email и содержать их внутри
+  const loginLower = login.toLowerCase();
+  const emailLocal = email.split("@")[0].toLowerCase();
+  const passLower = password.toLowerCase();
+  if (passLower === loginLower || passLower === emailLocal) {
+    return NextResponse.json({ error: "Пароль не должен совпадать с логином или email" }, { status: 400 });
+  }
+
+  // Rate-limit: 5 регистраций в час с одного IP (спам-защита почтового лимита)
+  const rl = rateLimit(`register:${clientIp(request)}`, 5, 60 * 60 * 1000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: `Слишком много регистраций. Попробуйте через ${Math.ceil(rl.retryAfterSec / 60)} мин.` },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+    );
   }
 
   if (await findUserByLogin(login)) {

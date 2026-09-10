@@ -26,8 +26,8 @@ export default function LoginPage() {
       setError(body.error ?? "Ошибка входа");
       return;
     }
-    // Админ — в панель; без юзернейма — в онбординг; остальные — на главную
-    router.push(body.redirect ?? (body.role === "admin" ? "/admin" : "/"));
+    // Без юзернейма — в онбординг; остальные — на главную (админ-панель доступна по /admin)
+    router.push(body.redirect ?? "/");
     router.refresh();
   };
 
@@ -36,9 +36,7 @@ export default function LoginPage() {
       <div className="glow left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 bg-indigo-500" />
       <div className="card relative w-full max-w-md p-6 sm:p-8">
         <h1 className="text-3xl font-extrabold text-white">Вход</h1>
-        <p className="mt-2 text-sm text-zinc-400">
-          Введите логин и пароль. Администратор попадёт в панель управления.
-        </p>
+        <p className="mt-2 text-sm text-zinc-400">Введите логин и пароль, чтобы продолжить.</p>
 
         <div className="mt-8 space-y-4">
           <label className="block">

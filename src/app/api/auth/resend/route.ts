@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { kvGet, kvSet, putCode } from "@/lib/storage";
-import { generateCode } from "@/lib/users";
+import { generateCode, rateLimit, clientIp } from "@/lib/users";
 import { sendVerificationEmail } from "@/lib/mailer";
 
 /**
@@ -19,6 +19,15 @@ export async function POST(request: Request) {
   const target = (body.target ?? "").trim().toLowerCase();
   if (!/^\S+@\S+\.\S+$/.test(target)) {
     return NextResponse.json({ error: "Некорректный email" }, { status: 400 });
+  }
+
+  // Rate-limit повторных отправок: 5 в 10 минут с одного IP
+  const rl = rateLimit(`resend:${clientIp(request)}`, 5, 10 * 60 * 1000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: `Слишком много запросов. Попробуйте через ${Math.ceil(rl.retryAfterSec / 60)} мин.` },
+      { status: 429 }
+    );
   }
 
   const entry = await kvGet<{ code: string; payload: Record<string, string>; expiresAt: number; resendAt?: number } | null>(`code:${target}`);

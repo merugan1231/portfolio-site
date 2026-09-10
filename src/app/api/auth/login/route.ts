@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { findUserByLogin, findUserByEmail, findUserByUsername } from "@/lib/storage";
-import { hashPassword } from "@/lib/users";
+import { hashPassword, rateLimit, clientIp } from "@/lib/users";
 import { createSession } from "@/lib/sessions";
 import { SESSION_COOKIE } from "@/lib/current-user";
 
@@ -16,6 +16,24 @@ export async function POST(request: Request) {
   const password = body.password ?? "";
   if (!login || !password) {
     return NextResponse.json({ error: "Заполните логин/email/юзернейм и пароль" }, { status: 400 });
+  }
+
+  // Rate-limit: 20 попыток входа в 5 минут на IP (защита от перебора),
+  // плюс 8 попыток на конкретную пару IP+логин (атака на один аккаунт)
+  const ip = clientIp(request);
+  const rlIp = rateLimit(`login:ip:${ip}`, 20, 5 * 60 * 1000);
+  if (!rlIp.ok) {
+    return NextResponse.json(
+      { error: `Слишком много попыток входа. Подождите ${rlIp.retryAfterSec} сек.` },
+      { status: 429, headers: { "Retry-After": String(rlIp.retryAfterSec) } }
+    );
+  }
+  const rl = rateLimit(`login:acct:${ip}:${login.toLowerCase()}`, 8, 5 * 60 * 1000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: `Слишком много попыток входа в этот аккаунт. Подождите ${rl.retryAfterSec} сек.` },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+    );
   }
 
   // Вход по любому из трёх идентификаторов: логин, email или публичный юзернейм
@@ -38,6 +56,7 @@ export async function POST(request: Request) {
   res.cookies.set(SESSION_COOKIE, session.token, {
     httpOnly: true,
     sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
   });
