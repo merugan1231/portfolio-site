@@ -59,6 +59,7 @@ async function ensureTables(): Promise<void> {
             links JSONB NOT NULL DEFAULT '[]',
             verify_token TEXT NOT NULL,
             verify_url TEXT NOT NULL DEFAULT '',
+            verify_extra TEXT NOT NULL DEFAULT '',
             verify_status TEXT NOT NULL DEFAULT 'unverified',
             verify_note TEXT NOT NULL DEFAULT '',
             created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -83,7 +84,10 @@ async function ensureTables(): Promise<void> {
             created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
             used_by TEXT,
             used_at TIMESTAMPTZ,
-            note TEXT NOT NULL DEFAULT ''
+            note TEXT NOT NULL DEFAULT '',
+            max_uses INTEGER NOT NULL DEFAULT 1,
+            uses INTEGER NOT NULL DEFAULT 0,
+            valid_until TIMESTAMPTZ
           );
           CREATE TABLE IF NOT EXISTS tickets (
             id TEXT PRIMARY KEY,
@@ -99,6 +103,19 @@ async function ensureTables(): Promise<void> {
             updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
           );
           CREATE INDEX IF NOT EXISTS tickets_user_idx ON tickets (user_id);
+          CREATE TABLE IF NOT EXISTS username_requests (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            user_login TEXT NOT NULL DEFAULT '',
+            current_username TEXT NOT NULL DEFAULT '',
+            requested_username TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'open',
+            admin_reply TEXT NOT NULL DEFAULT '',
+            handled_by TEXT NOT NULL DEFAULT '',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+          );
+          CREATE INDEX IF NOT EXISTS username_requests_user_idx ON username_requests (user_id);
         `);
         // Миграция: новые колонки профиля (для уже существующих таблиц)
         const cols = [
@@ -123,6 +140,12 @@ async function ensureTables(): Promise<void> {
         await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_username_idx ON users (lower(username)) WHERE username IS NOT NULL AND username <> ''`);
         // Свой вариант типа работы у работ
         await client.query(`ALTER TABLE works ADD COLUMN IF NOT EXISTS type_custom TEXT NOT NULL DEFAULT ''`);
+        // Доп. ссылка подтверждения по типу работы (граф кейса, скриншот слоёв, макет)
+        await client.query(`ALTER TABLE works ADD COLUMN IF NOT EXISTS verify_extra TEXT NOT NULL DEFAULT ''`);
+        // Промокоды: многократная активация и срок действия кода
+        await client.query(`ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS max_uses INTEGER NOT NULL DEFAULT 1`);
+        await client.query(`ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS uses INTEGER NOT NULL DEFAULT 0`);
+        await client.query(`ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS valid_until TIMESTAMPTZ`);
       } finally {
         client.release();
       }
@@ -303,9 +326,12 @@ export type DbPromoCode = {
   days: number;
   createdBy: string;
   createdAt: string;
-  usedBy: string | null;
+  usedBy: string | null;   // последний активировавший (для обратной совместимости)
   usedAt: string | null;
   note: string;
+  maxUses: number;         // сколько раз можно активировать (0 = без ограничений)
+  uses: number;            // сколько уже активировали
+  validUntil: string | null; // до когда код можно активировать (null = бессрочно)
 };
 
 function rowToPromo(r: Record<string, unknown>): DbPromoCode {
@@ -317,15 +343,18 @@ function rowToPromo(r: Record<string, unknown>): DbPromoCode {
     usedBy: (r.used_by as string) ?? null,
     usedAt: r.used_at ? (r.used_at as Date).toISOString() : null,
     note: (r.note as string) ?? "",
+    maxUses: (r.max_uses as number) ?? 1,
+    uses: (r.uses as number) ?? 0,
+    validUntil: r.valid_until ? (r.valid_until as Date).toISOString() : null,
   };
 }
 
 export async function dbCreatePromoCode(p: DbPromoCode): Promise<void> {
   await ensureTables();
   await getPool().query(
-    `INSERT INTO promo_codes (code, days, created_by, created_at, note)
-     VALUES ($1, $2, $3, now(), $4) ON CONFLICT (code) DO NOTHING`,
-    [p.code, p.days, p.createdBy, p.note]
+    `INSERT INTO promo_codes (code, days, created_by, created_at, note, max_uses, uses, valid_until)
+     VALUES ($1, $2, $3, now(), $4, $5, 0, $6) ON CONFLICT (code) DO NOTHING`,
+    [p.code, p.days, p.createdBy, p.note, p.maxUses ?? 1, p.validUntil ?? null]
   );
 }
 
@@ -335,12 +364,20 @@ export async function dbListPromoCodes(): Promise<DbPromoCode[]> {
   return res.rows.map(rowToPromo);
 }
 
-/** Атомарная активация промокода: помечаем использованным и возвращаем срок. */
+/**
+ * Атомарная активация промокода: счётчик использований растёт, пока есть свободные
+ * активации и не истёк срок действия кода. Возвращает срок подписки в днях.
+ */
 export async function dbRedeemPromoCode(code: string, userId: string): Promise<number | null> {
   await ensureTables();
   const res = await getPool().query(
-    `UPDATE promo_codes SET used_by = $2, used_at = now()
-     WHERE upper(code) = upper($1) AND used_by IS NULL
+    `UPDATE promo_codes
+     SET uses = uses + 1,
+         used_at = now(),
+         used_by = CASE WHEN max_uses <= 1 THEN $2 ELSE used_by END
+     WHERE upper(code) = upper($1)
+       AND (max_uses = 0 OR uses < max_uses)
+       AND (valid_until IS NULL OR valid_until > now())
      RETURNING days`,
     [code, userId]
   );
@@ -420,4 +457,73 @@ export async function dbUpdateTicket(id: string, status: DbTicket["status"], adm
     [id, status, adminReply, handledBy]
   );
   return res.rows[0] ? rowToTicket(res.rows[0]) : null;
+}
+
+// ---------- Запросы на смену юзернейма ----------
+
+export type DbUsernameRequest = {
+  id: string;
+  userId: string;
+  userLogin: string;
+  currentUsername: string;
+  requestedUsername: string;
+  status: "open" | "approved" | "dismissed";
+  adminReply: string;
+  handledBy: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+function rowToUsernameRequest(r: Record<string, unknown>): DbUsernameRequest {
+  return {
+    id: r.id as string,
+    userId: r.user_id as string,
+    userLogin: (r.user_login as string) ?? "",
+    currentUsername: (r.current_username as string) ?? "",
+    requestedUsername: (r.requested_username as string) ?? "",
+    status: (r.status as DbUsernameRequest["status"]) ?? "open",
+    adminReply: (r.admin_reply as string) ?? "",
+    handledBy: (r.handled_by as string) ?? "",
+    createdAt: (r.created_at as Date).toISOString(),
+    updatedAt: (r.updated_at as Date).toISOString(),
+  };
+}
+
+export async function dbCreateUsernameRequest(t: Omit<DbUsernameRequest, "status" | "adminReply" | "handledBy" | "createdAt" | "updatedAt">): Promise<DbUsernameRequest> {
+  await ensureTables();
+  const res = await getPool().query(
+    `INSERT INTO username_requests (id, user_id, user_login, current_username, requested_username)
+     VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+    [t.id, t.userId, t.userLogin, t.currentUsername, t.requestedUsername]
+  );
+  return rowToUsernameRequest(res.rows[0]);
+}
+
+export async function dbListUsernameRequests(status?: "open" | "approved" | "dismissed"): Promise<DbUsernameRequest[]> {
+  await ensureTables();
+  const res = status
+    ? await getPool().query("SELECT * FROM username_requests WHERE status = $1 ORDER BY (status = 'open') DESC, created_at DESC LIMIT 200", [status])
+    : await getPool().query("SELECT * FROM username_requests ORDER BY (status = 'open') DESC, created_at DESC LIMIT 200");
+  return res.rows.map(rowToUsernameRequest);
+}
+
+export async function dbListUsernameRequestsByUser(userId: string): Promise<DbUsernameRequest[]> {
+  await ensureTables();
+  const res = await getPool().query("SELECT * FROM username_requests WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10", [userId]);
+  return res.rows.map(rowToUsernameRequest);
+}
+
+export async function dbGetUsernameRequest(id: string): Promise<DbUsernameRequest | null> {
+  await ensureTables();
+  const res = await getPool().query("SELECT * FROM username_requests WHERE id = $1", [id]);
+  return res.rows[0] ? rowToUsernameRequest(res.rows[0]) : null;
+}
+
+export async function dbUpdateUsernameRequest(id: string, status: DbUsernameRequest["status"], adminReply: string, handledBy: string): Promise<DbUsernameRequest | null> {
+  await ensureTables();
+  const res = await getPool().query(
+    `UPDATE username_requests SET status = $2, admin_reply = $3, handled_by = $4, updated_at = now() WHERE id = $1 RETURNING *`,
+    [id, status, adminReply, handledBy]
+  );
+  return res.rows[0] ? rowToUsernameRequest(res.rows[0]) : null;
 }

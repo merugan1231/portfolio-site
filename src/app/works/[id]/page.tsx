@@ -24,6 +24,7 @@ type Work = {
   budget: string;
   potential: string;
   links: { label: string; url: string }[];
+  verifyExtra: string;
   verifyStatus: "unverified" | "pending" | "verified";
   createdAt: string;
   rating: { avg: number; count: number };
@@ -31,7 +32,8 @@ type Work = {
 
 const TYPE_LABELS: Record<string, string> = {
   site: "Сайт / лендинг", webapp: "Веб-приложение", bot: "Телеграм-бот", mobile: "Мобильное приложение",
-  osint: "OSINT-расследование", design: "Дизайн / иллюстрация", script: "Скрипт / автоматизация", custom: "Свой вариант",
+  osint: "OSINT-расследование (кейс)", "osint-reveal": "OSINT-раскрытие кейса", design: "Дизайн / иллюстрация",
+  "design-project": "Дизайн-проект (UI/UX, брендинг)", architecture: "Архитектура / проектирование", script: "Скрипт / автоматизация", custom: "Свой вариант",
 };
 
 function Stars({ value, onChange }: { value: number; onChange?: (v: number) => void }) {
@@ -149,13 +151,18 @@ export default function WorkPage() {
 
       <p className="mt-5 text-lg leading-relaxed text-zinc-300">{work.summary}</p>
 
-      {work.links.length > 0 && (
+      {(work.links.length > 0 || work.verifyExtra) && (
         <div className="mt-4 flex flex-wrap gap-3">
           {work.links.map((l) => (
             <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className="btn btn-ghost !py-2 text-sm">
               {l.label} ↗
             </a>
           ))}
+          {work.verifyExtra && (
+            <a href={work.verifyExtra} target="_blank" rel="noopener noreferrer" className="btn btn-ghost !border-lime-300/30 !py-2 text-sm text-lime-300">
+              📊 Визуализация кейса ↗
+            </a>
+          )}
         </div>
       )}
 

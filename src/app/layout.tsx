@@ -15,13 +15,37 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://merugan.is-a.dev";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "DevShelf — полка работ разработчиков и креаторов",
     template: "%s — DevShelf",
   },
   description:
     "DevShelf — сервис, где программисты, OSINT-специалисты, кейсисты, иллюстраторы и создатели ботов собирают портфолио из подтверждённых работ с подробным описанием процесса.",
+  applicationName: "DevShelf",
+  keywords: [
+    "DevShelf", "портфолио", "разработчик", "OSINT", "дизайн", "программирование",
+    "подтверждение авторства", "работы", "кейс", "телеграм-бот", "веб-разработка",
+  ],
+  authors: [{ name: "DevShelf" }],
+  openGraph: {
+    type: "website",
+    locale: "ru_RU",
+    siteName: "DevShelf",
+    title: "DevShelf — полка работ разработчиков и креаторов",
+    description:
+      "Собирайте портфолио из подтверждённых работ: процесс, команда, стек и результат. Программисты, OSINT-специалисты, дизайнеры и креаторы — всё на одной полке.",
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "DevShelf — полка работ разработчиков и креаторов",
+    description: "Портфолио из подтверждённых работ: процесс, команда, стек и результат.",
+  },
+  robots: { index: true, follow: true },
 };
 
 export const viewport: Viewport = {

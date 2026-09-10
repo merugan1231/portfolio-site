@@ -31,6 +31,8 @@ const BIO_LABELS: Record<string, string> = {
 const ROLE_LABELS: Record<string, { label: string; emoji: string }> = {
   developer: { label: "Программист", emoji: "💻" },
   osint: { label: "OSINT-аналитик", emoji: "🔍" },
+  "osint-author": { label: "Создатель кейсов", emoji: "🕵️" },
+  "osint-revealer": { label: "Раскрыватель кейсов", emoji: "🕸️" },
   designer: { label: "Дизайнер", emoji: "🎨" },
   tester: { label: "Тестировщик (QA)", emoji: "🧪" },
   devops: { label: "DevOps", emoji: "⚙️" },

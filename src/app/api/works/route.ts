@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getActiveUser } from "@/lib/current-user";
-import { createWork, updateWork, getUserWorks, getWork, getWorkRating, getWorkReviews, autoVerify, newVerifyToken, WORK_TYPES, type WorkType, type WorkLink } from "@/lib/works";
+import { createWork, updateWork, getUserWorks, getWork, getWorkRating, getWorkReviews, autoVerify, newVerifyToken, WORK_TYPES, VERIFY_HINTS, type WorkType, type WorkLink } from "@/lib/works";
 import { FREE_WORK_LIMIT, isPro } from "@/lib/users";
 
 const VALID_TYPES = new Set(WORK_TYPES.map((t) => t.id));
@@ -26,7 +26,7 @@ export async function GET() {
   const withRatings = await Promise.all(
     works.map(async (w) => ({ ...w, rating: await getWorkRating(w.id) }))
   );
-  return NextResponse.json({ works: withRatings, types: WORK_TYPES });
+  return NextResponse.json({ works: withRatings, types: WORK_TYPES, verifyHints: VERIFY_HINTS });
 }
 
 export async function POST(request: Request) {
@@ -51,6 +51,7 @@ export async function POST(request: Request) {
   const potential = String(body.potential ?? "").trim();
   const links = cleanLinks(body.links);
   const verifyUrl = String(body.verifyUrl ?? "").trim();
+  const verifyExtra = String(body.verifyExtra ?? "").trim().slice(0, 500);
 
   if (!VALID_TYPES.has(type)) return NextResponse.json({ error: "Выберите тип работы" }, { status: 400 });
   if (type === "custom" && typeCustom.length < 2) {
@@ -64,6 +65,9 @@ export async function POST(request: Request) {
   if (links.length === 0) return NextResponse.json({ error: "Добавьте хотя бы одну ссылку на работу" }, { status: 400 });
   if (verifyUrl && !/^https?:\/\/\S+$/.test(verifyUrl)) {
     return NextResponse.json({ error: "Ссылка для подтверждения должна начинаться с http(s)://" }, { status: 400 });
+  }
+  if (verifyExtra && !/^https?:\/\/\S+$/.test(verifyExtra)) {
+    return NextResponse.json({ error: "Доп. ссылка (визуализация/исходник) должна начинаться с http(s)://" }, { status: 400 });
   }
 
   // Лимит работ: 5 на бесплатном тарифе, безлимит на Pro
@@ -91,6 +95,7 @@ export async function POST(request: Request) {
     potential: potential.slice(0, 500),
     links,
     verifyUrl,
+    verifyExtra,
     verifyToken: token,
   });
 

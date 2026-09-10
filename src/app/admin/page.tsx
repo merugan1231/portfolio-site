@@ -68,16 +68,33 @@ type PromoCode = {
   usedBy: string | null;
   usedAt: string | null;
   note: string;
+  maxUses: number;
+  uses: number;
+  validUntil: string | null;
+};
+
+type UsernameRequest = {
+  id: string;
+  userId: string;
+  userLogin: string;
+  currentUsername: string;
+  requestedUsername: string;
+  status: "open" | "approved" | "dismissed";
+  adminReply: string;
+  handledBy: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export default function AdminPage() {
   const router = useRouter();
   const [me, setMe] = useState<Me | null | undefined>(undefined);
-  const [tab, setTab] = useState<"portfolio" | "users" | "moderation" | "promo" | "tickets">("portfolio");
+  const [tab, setTab] = useState<"portfolio" | "users" | "moderation" | "promo" | "tickets" | "usernames">("portfolio");
   const [disputed, setDisputed] = useState<DisputedReview[]>([]);
   const [worksPending, setWorksPending] = useState<PendingWork[]>([]);
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [usernameRequests, setUsernameRequests] = useState<UsernameRequest[]>([]);
   const [myRole, setMyRole] = useState("user");
 
   const [login, setLogin] = useState("");
@@ -95,12 +112,13 @@ export default function AdminPage() {
     const isStaffUser = !!s.user && (s.user.role === "admin" || s.user.role === "creator");
     setMe(isStaffUser ? s.user : null);
     if (isStaffUser) setMyRole(s.user.role);
-    const [d, u, m, p, t] = await Promise.all([
+    const [d, u, m, p, t, ur] = await Promise.all([
       fetch("/api/portfolio").then((r) => r.json()),
       fetch("/api/admin/users").then((r) => (r.ok ? r.json() : { users: [] })),
       fetch("/api/admin/moderation").then((r) => (r.ok ? r.json() : { disputed: [], worksPending: [] })),
       fetch("/api/admin/promo").then((r) => (r.ok ? r.json() : { promoCodes: [] })),
       fetch("/api/admin/tickets").then((r) => (r.ok ? r.json() : { tickets: [] })),
+      fetch("/api/admin/username-requests").then((r) => (r.ok ? r.json() : { requests: [] })),
     ]);
     setData(d);
     setUsers(u.users ?? []);
@@ -108,6 +126,7 @@ export default function AdminPage() {
     setWorksPending(m.worksPending ?? []);
     setPromoCodes(p.promoCodes ?? []);
     setTickets(t.tickets ?? []);
+    setUsernameRequests(ur.requests ?? []);
   }, []);
 
   useEffect(() => {
@@ -309,6 +328,7 @@ export default function AdminPage() {
               ["users", `Пользователи (${users.length})`],
               ["moderation", `Модерация (${disputed.length + worksPending.length})`],
               ["tickets", `Тикеты (${tickets.filter((t) => t.status === "open").length})`],
+              ["usernames", `Юзернеймы (${usernameRequests.filter((r) => r.status === "open").length})`],
               ...(myRole === "creator"
                 ? [["promo", `Промокоды (${promoCodes.filter((c) => !c.usedBy).length})`] as const]
                 : []),
@@ -615,6 +635,8 @@ export default function AdminPage() {
 
       {tab === "tickets" && <TicketsTab tickets={tickets} onAction={loadAll} />}
 
+      {tab === "usernames" && <UsernameRequestsTab requests={usernameRequests} onAction={loadAll} />}
+
       {/* Модалка причины заморозки/блокировки */}
       {statusTarget && (
         <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
@@ -733,9 +755,13 @@ function PromoTab({ codes, onAction }: { codes: PromoCode[]; onAction: () => voi
   const [code, setCode] = useState("");
   const [days, setDays] = useState("30");
   const [note, setNote] = useState("");
+  const [maxUses, setMaxUses] = useState("1");
+  const [unlimited, setUnlimited] = useState(false);
+  const [validDays, setValidDays] = useState("");
+  const [noExpiry, setNoExpiry] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [created, setCreated] = useState<{ code: string; days: number } | null>(null);
+  const [created, setCreated] = useState<{ code: string; days: number; maxUses: number; validUntil: string | null } | null>(null);
 
   async function create() {
     setError("");
@@ -744,7 +770,13 @@ function PromoTab({ codes, onAction }: { codes: PromoCode[]; onAction: () => voi
     const res = await fetch("/api/admin/promo", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: code.trim(), days: Number(days), note: note.trim() }),
+      body: JSON.stringify({
+        code: code.trim(),
+        days: Number(days),
+        note: note.trim(),
+        maxUses: unlimited ? 0 : Number(maxUses || "1"),
+        validDays: noExpiry ? 0 : Number(validDays || "0"),
+      }),
     });
     const body = await res.json().catch(() => ({}));
     setBusy(false);
@@ -752,7 +784,7 @@ function PromoTab({ codes, onAction }: { codes: PromoCode[]; onAction: () => voi
       setError(body.error ?? "Не удалось создать промокод");
       return;
     }
-    setCreated({ code: body.code, days: body.days });
+    setCreated({ code: body.code, days: body.days, maxUses: body.maxUses, validUntil: body.validUntil });
     setCode("");
     setNote("");
     onAction();
@@ -766,7 +798,7 @@ function PromoTab({ codes, onAction }: { codes: PromoCode[]; onAction: () => voi
       <section className="card p-6">
         <h2 className="text-lg font-semibold text-white">Создать промокод</h2>
         <p className="mt-1 text-sm text-zinc-500">
-          Код одноразовый: активировавший его пользователь получает Pro на выбранный срок. У кого Pro уже активен — срок прибавится.
+          Активировавший получает Pro на выбранный срок. У кого Pro уже активен — срок прибавится.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-[1fr_auto_1fr]">
           <label className="block">
@@ -792,10 +824,61 @@ function PromoTab({ codes, onAction }: { codes: PromoCode[]; onAction: () => voi
             <input value={note} onChange={(e) => setNote(e.target.value)} className={inputCls} placeholder="для конкурса, другу…" />
           </label>
         </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          {/* Активации */}
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <span className="block text-sm text-zinc-400">Количество активаций</span>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-sm text-zinc-300">
+                <input type="checkbox" checked={!unlimited} onChange={() => setUnlimited(false)} className="h-4 w-4 accent-lime-400" />
+                лимит:
+              </label>
+              <input
+                value={maxUses}
+                onChange={(e) => setMaxUses(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                disabled={unlimited}
+                className={`${inputCls} w-24 disabled:opacity-40`}
+                inputMode="numeric"
+                placeholder="2"
+              />
+              <label className="flex items-center gap-2 text-sm text-zinc-300">
+                <input type="checkbox" checked={unlimited} onChange={() => setUnlimited(true)} className="h-4 w-4 accent-lime-400" />
+                ∞ без ограничений
+              </label>
+            </div>
+            <p className="mt-1.5 text-xs text-zinc-600">Сколько разных пользователей смогут активировать код.</p>
+          </div>
+          {/* Срок действия кода */}
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <span className="block text-sm text-zinc-400">Срок действия самого кода</span>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-sm text-zinc-300">
+                <input type="checkbox" checked={!noExpiry} onChange={() => setNoExpiry(false)} className="h-4 w-4 accent-lime-400" />
+                истекает через,
+              </label>
+              <input
+                value={validDays}
+                onChange={(e) => setValidDays(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                disabled={noExpiry}
+                className={`${inputCls} w-24 disabled:opacity-40`}
+                inputMode="numeric"
+                placeholder="14"
+              />
+              <span className="text-sm text-zinc-400">дн.</span>
+              <label className="flex items-center gap-2 text-sm text-zinc-300">
+                <input type="checkbox" checked={noExpiry} onChange={() => setNoExpiry(true)} className="h-4 w-4 accent-lime-400" />
+                бессрочно
+              </label>
+            </div>
+            <p className="mt-1.5 text-xs text-zinc-600">После этой даты код больше нельзя будет активировать.</p>
+          </div>
+        </div>
         {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
         {created && (
           <div className="mt-3 rounded-lg border border-lime-300/30 bg-lime-300/10 px-4 py-3 text-sm text-lime-200">
-            ✅ Промокод <strong className="select-all tracking-wider">{created.code}</strong> создан — даёт Pro на {created.days} дн.
+            ✅ Промокод <strong className="select-all tracking-wider">{created.code}</strong> создан — даёт Pro на {created.days} дн.,
+            активаций: {created.maxUses === 0 ? "∞" : created.maxUses}
+            {created.validUntil ? `, действует до ${new Date(created.validUntil).toLocaleDateString("ru-RU")}` : ", бессрочно"}.
           </div>
         )}
         <button onClick={create} disabled={busy} className="btn btn-primary mt-4 text-sm disabled:opacity-50">
@@ -806,35 +889,52 @@ function PromoTab({ codes, onAction }: { codes: PromoCode[]; onAction: () => voi
       <section>
         <h2 className="text-lg font-semibold text-white">Все промокоды</h2>
         <div className="mt-4 overflow-x-auto rounded-2xl border border-white/10">
-          <table className="w-full min-w-[560px] text-left text-sm">
+          <table className="w-full min-w-[640px] text-left text-sm">
             <thead>
               <tr className="border-b border-white/10 bg-white/[0.02] text-xs uppercase tracking-wider text-zinc-500">
                 <th className="px-4 py-3">Код</th>
                 <th className="px-4 py-3">Срок</th>
-                <th className="px-4 py-3">Статус</th>
+                <th className="px-4 py-3">Активации</th>
+                <th className="px-4 py-3">Действует</th>
                 <th className="px-4 py-3">Заметка</th>
                 <th className="px-4 py-3">Создан</th>
               </tr>
             </thead>
             <tbody>
-              {codes.map((c) => (
+              {codes.map((c) => {
+                const exhausted = c.maxUses > 0 && c.uses >= c.maxUses;
+                const expired = c.validUntil ? new Date(c.validUntil).getTime() < Date.now() : false;
+                return (
                 <tr key={c.code} className="border-b border-white/5 last:border-0">
                   <td className="px-4 py-3 font-mono font-semibold text-lime-300">{c.code}</td>
                   <td className="px-4 py-3 text-zinc-300">{c.days} дн.</td>
                   <td className="px-4 py-3">
-                    {c.usedBy ? (
-                      <span className="text-zinc-500">активирован {c.usedAt ? new Date(c.usedAt).toLocaleDateString("ru-RU") : ""}</span>
+                    {exhausted ? (
+                      <span className="text-zinc-500">исчерпан ({c.uses}/{c.maxUses})</span>
                     ) : (
-                      <span className="rounded-md bg-lime-300/10 px-2 py-0.5 text-xs text-lime-300">свободен</span>
+                      <span className="text-zinc-300">{c.uses} / {c.maxUses === 0 ? "∞" : c.maxUses}</span>
+                    )}
+                    {c.usedBy && c.maxUses <= 1 && (
+                      <div className="text-xs text-zinc-600">{c.usedBy}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {expired ? (
+                      <span className="text-red-400">истёк</span>
+                    ) : c.validUntil ? (
+                      <span className="text-zinc-300">до {new Date(c.validUntil).toLocaleDateString("ru-RU")}</span>
+                    ) : (
+                      <span className="text-zinc-500">бессрочно</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-zinc-500">{c.note || "—"}</td>
                   <td className="px-4 py-3 text-zinc-500">{new Date(c.createdAt).toLocaleDateString("ru-RU")}</td>
                 </tr>
-              ))}
+                );
+              })}
               {codes.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-zinc-500">
+                  <td colSpan={6} className="px-4 py-6 text-center text-zinc-500">
                     Промокодов ещё нет
                   </td>
                 </tr>
@@ -947,6 +1047,80 @@ function ModerationTab({
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+function UsernameRequestsTab({ requests, onAction }: { requests: UsernameRequest[]; onAction: () => void }) {
+  const [reply, setReply] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  async function handle(id: string, action: "approve" | "dismiss") {
+    setBusy(id);
+    setError("");
+    const res = await fetch("/api/admin/username-requests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, action, reply: reply || undefined }),
+    });
+    const body = await res.json().catch(() => ({}));
+    setBusy(null);
+    setReply("");
+    if (!res.ok) setError(body.error ?? "Ошибка обработки запроса");
+    onAction();
+  }
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold text-white">Запросы на смену юзернейма</h2>
+      <p className="text-sm text-zinc-500">
+        Пользователи просят сменить закреплённый юзернейм. Одобрение меняет юзернейм сразу; ответ увидит автор запроса в кабинете.
+      </p>
+      {error && <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-300">{error}</div>}
+      {requests.length === 0 && <p className="text-sm text-zinc-500">Запросов пока нет 🎉</p>}
+      {requests.map((r) => (
+        <div key={r.id} className="card p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <span className="font-semibold text-white">{r.userLogin}</span>
+              <span className="ml-2 text-sm text-zinc-400">
+                {r.currentUsername ? `@${r.currentUsername} → ` : "без юзернейма → "}
+                <span className="font-medium text-lime-300">@{r.requestedUsername}</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {r.status === "open" && <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-1 text-xs text-amber-200">на модерации</span>}
+              {r.status === "approved" && <span className="rounded-full border border-lime-300/30 bg-lime-300/10 px-2.5 py-1 text-xs text-lime-200">одобрен</span>}
+              {r.status === "dismissed" && <span className="rounded-full border border-zinc-500/30 bg-zinc-500/10 px-2.5 py-1 text-xs text-zinc-400">отклонён</span>}
+              <span className="text-xs text-zinc-600">{new Date(r.createdAt).toLocaleString("ru-RU")}</span>
+            </div>
+          </div>
+          {r.adminReply && (
+            <p className="mt-2 rounded-lg border border-indigo-400/20 bg-indigo-500/10 p-3 text-sm text-indigo-200">
+              Ответ ({r.handledBy}): {r.adminReply}
+            </p>
+          )}
+          {r.status === "open" && (
+            <div className="mt-3">
+              <input
+                value={reply}
+                onChange={(e) => setReply(e.target.value)}
+                placeholder="Комментарий пользователю (необязательно)"
+                className="w-full rounded-xl border border-white/10 bg-zinc-900/70 px-4 py-2.5 text-sm text-white outline-none transition-colors focus:border-indigo-400"
+              />
+              <div className="mt-2 flex gap-3">
+                <button disabled={busy === r.id} onClick={() => handle(r.id, "approve")} className="btn btn-primary !py-2 text-xs disabled:opacity-50">
+                  ✅ Одобрить и сменить
+                </button>
+                <button disabled={busy === r.id} onClick={() => handle(r.id, "dismiss")} className="btn btn-ghost !py-2 text-xs disabled:opacity-50">
+                  ❌ Отклонить
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }

@@ -45,18 +45,22 @@ type Work = {
   verifyNote: string;
   verifyToken: string;
   verifyUrl: string;
+  verifyExtra: string;
   createdAt: string;
   rating: { avg: number; count: number };
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  site: "Сайт", webapp: "Веб-приложение", bot: "Телеграм-бот", mobile: "Мобильное приложение",
-  osint: "OSINT", design: "Дизайн", script: "Скрипт", custom: "Свой вариант",
+  site: "Сайт / лендинг", webapp: "Веб-приложение", bot: "Телеграм-бот", mobile: "Мобильное приложение",
+  osint: "OSINT-расследование (кейс)", "osint-reveal": "OSINT-раскрытие кейса", design: "Дизайн / иллюстрация",
+  "design-project": "Дизайн-проект (UI/UX, брендинг)", architecture: "Архитектура / проектирование", script: "Скрипт / автоматизация", custom: "Свой вариант",
 };
 
 const ROLES = [
   { id: "developer", label: "Программист", emoji: "💻" },
   { id: "osint", label: "OSINT-аналитик", emoji: "🔍" },
+  { id: "osint-author", label: "Создатель кейсов", emoji: "🕵️" },
+  { id: "osint-revealer", label: "Раскрыватель кейсов", emoji: "🕸️" },
   { id: "designer", label: "Дизайнер", emoji: "🎨" },
   { id: "tester", label: "Тестировщик (QA)", emoji: "🧪" },
   { id: "devops", label: "DevOps", emoji: "⚙️" },
@@ -105,6 +109,14 @@ export default function CabinetPage() {
   const [promo, setPromo] = useState("");
   const [promoBusy, setPromoBusy] = useState(false);
 
+  // Запрос на смену юзернейма
+  const [usernameRequestOpen, setUsernameRequestOpen] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
+  const [usernameRequestBusy, setUsernameRequestBusy] = useState(false);
+  const [usernameRequestNotice, setUsernameRequestNotice] = useState("");
+  const [usernameRequestError, setUsernameRequestError] = useState("");
+  const [usernameRequests, setUsernameRequests] = useState<{ id: string; requestedUsername: string; status: "open" | "approved" | "dismissed"; adminReply: string; createdAt: string }[]>([]);
+
   const load = useCallback(async () => {
     const meRes = await fetch("/api/auth/me");
     const me = await meRes.json();
@@ -128,6 +140,11 @@ export default function CabinetPage() {
     const wRes = await fetch("/api/works");
     const w = await wRes.json();
     setWorks(w.works ?? []);
+    const urRes = await fetch("/api/username-requests");
+    if (urRes.ok) {
+      const ur = await urRes.json();
+      setUsernameRequests(ur.requests ?? []);
+    }
   }, [router]);
 
   useEffect(() => {
@@ -150,6 +167,33 @@ export default function CabinetPage() {
       return;
     }
     setNotice("Профиль сохранён ✅");
+    load();
+  }
+
+  /** Отправка запроса на смену юзернейма в модерацию. */
+  async function submitUsernameRequest() {
+    setUsernameRequestError("");
+    setUsernameRequestNotice("");
+    const requested = newUsername.trim();
+    if (!requested) {
+      setUsernameRequestError("Введите желаемый юзернейм");
+      return;
+    }
+    setUsernameRequestBusy(true);
+    const res = await fetch("/api/username-requests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: requested }),
+    });
+    const body = await res.json().catch(() => ({}));
+    setUsernameRequestBusy(false);
+    if (!res.ok) {
+      setUsernameRequestError(body.error ?? "Не удалось отправить запрос");
+      return;
+    }
+    setNewUsername("");
+    setUsernameRequestOpen(false);
+    setUsernameRequestNotice(`Запрос на смену юзернейма на @${requested} отправлен в модерацию — ответ появится здесь.`);
     load();
   }
 
@@ -326,6 +370,68 @@ export default function CabinetPage() {
                   : "От 5 символов, начинается и заканчивается буквой. Задаётся один раз и не меняется!"}
               </span>
             </label>
+            {/* Запрос на смену юзернейма */}
+            <div>
+              {usernameRequestNotice && (
+                <div className="rounded-xl border border-lime-300/30 bg-lime-300/10 px-4 py-3 text-sm text-lime-200">{usernameRequestNotice}</div>
+              )}
+              {!usernameRequestOpen ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUsernameRequestOpen(true);
+                    setUsernameRequestNotice("");
+                    setUsernameRequestError("");
+                  }}
+                  className="text-sm font-medium text-indigo-300 underline-offset-4 transition-colors hover:text-indigo-200 hover:underline"
+                >
+                  🔁 Создать запрос на смену юзернейма
+                </button>
+              ) : (
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                  <p className="text-sm text-zinc-400">
+                    Юзернейм меняется только через модерацию. Напишите желаемый — администрация рассмотрит запрос.
+                  </p>
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <input
+                      value={newUsername}
+                      onChange={(e) => setNewUsername(e.target.value)}
+                      placeholder={profile.username ? `сейчас: @${profile.username}` : "желаемый юзернейм"}
+                      className="w-full rounded-xl border border-white/10 bg-zinc-900/70 px-4 py-2.5 text-white outline-none transition-colors focus:border-indigo-400 sm:flex-1"
+                    />
+                    <button type="button" onClick={submitUsernameRequest} disabled={usernameRequestBusy} className="btn btn-primary !py-2.5 text-sm disabled:opacity-50">
+                      {usernameRequestBusy ? "Отправляю…" : "Отправить запрос"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUsernameRequestOpen(false);
+                        setUsernameRequestError("");
+                      }}
+                      className="btn btn-ghost !py-2.5 text-sm"
+                    >
+                      Отмена
+                    </button>
+                  </div>
+                  {usernameRequestError && <p className="mt-2 text-sm text-red-400">{usernameRequestError}</p>}
+                </div>
+              )}
+              {usernameRequests.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {usernameRequests.map((r) => (
+                    <div key={r.id} className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-zinc-300">@{r.requestedUsername}</span>
+                        {r.status === "open" && <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-amber-200">⏳ на модерации</span>}
+                        {r.status === "approved" && <span className="rounded-full border border-lime-300/30 bg-lime-300/10 px-2 py-0.5 text-lime-200">✅ одобрен</span>}
+                        {r.status === "dismissed" && <span className="rounded-full border border-zinc-500/30 bg-zinc-500/10 px-2 py-0.5 text-zinc-400">❌ отклонён</span>}
+                      </div>
+                      {r.adminReply && <p className="mt-1 text-indigo-300">Ответ: {r.adminReply}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <label className="block">
               <span className="mb-1.5 block text-sm text-zinc-400">О себе (коротко)</span>
               <textarea value={bio} onChange={(e) => setBio(e.target.value)} className={`${input} min-h-20`} />
@@ -459,6 +565,11 @@ export default function CabinetPage() {
                       Код подтверждения (вставьте в README / описание / закреп): {" "}
                       <code className="select-all rounded bg-white/10 px-1.5 py-0.5 text-lime-300">{w.verifyToken}</code>
                     </div>
+                    {w.verifyExtra && (
+                      <div className="mt-1">
+                        Доп. подтверждение: <a href={w.verifyExtra} target="_blank" rel="noopener noreferrer" className="text-lime-300 hover:underline">{w.verifyExtra}</a>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

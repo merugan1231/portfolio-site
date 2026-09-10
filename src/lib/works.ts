@@ -13,8 +13,11 @@ export const WORK_TYPES = [
   { id: "webapp", label: "Веб-приложение" },
   { id: "bot", label: "Телеграм-бот" },
   { id: "mobile", label: "Мобильное приложение" },
-  { id: "osint", label: "OSINT-расследование" },
+  { id: "osint", label: "OSINT-расследование (кейс)" },
+  { id: "osint-reveal", label: "OSINT-раскрытие кейса" },
   { id: "design", label: "Дизайн / иллюстрация" },
+  { id: "design-project", label: "Дизайн-проект (UI/UX, брендинг)" },
+  { id: "architecture", label: "Архитектура / проектирование" },
   { id: "script", label: "Скрипт / автоматизация" },
   { id: "custom", label: "Свой вариант" },
 ] as const;
@@ -22,6 +25,71 @@ export const WORK_TYPES = [
 export type WorkType = (typeof WORK_TYPES)[number]["id"];
 
 export type WorkLink = { label: string; url: string };
+
+/**
+ * Способ подтверждения авторства — свой для каждого типа работы.
+ * hint — что вставить в подсказку формы; extraLabel — подпись доп. ссылки (пусто = не нужна).
+ */
+export const VERIFY_HINTS: Record<WorkType, { hint: string; extraLabel: string; extraPlaceholder: string }> = {
+  site: {
+    hint: "Разместите код в README репозитория или в подвале (footer) сайта — и укажите ссылку на это место.",
+    extraLabel: "",
+    extraPlaceholder: "",
+  },
+  webapp: {
+    hint: "Разместите код в README репозитория или на служебной странице приложения (например /about).",
+    extraLabel: "",
+    extraPlaceholder: "",
+  },
+  bot: {
+    hint: "Разместите код в описании бота в Telegram (/setdescription) или в закреплённом сообщении канала бота.",
+    extraLabel: "",
+    extraPlaceholder: "",
+  },
+  mobile: {
+    hint: "Разместите код в README репозитория или в описании релиза (GitHub Releases, Google Play, RuStore).",
+    extraLabel: "",
+    extraPlaceholder: "",
+  },
+  osint: {
+    hint: "Вы автор кейса: вставьте код в описание публикации кейса (статья, Telegraf, Notion) или в отчёт. Ссылку на раскрытие кейса добавьте ниже.",
+    extraLabel: "Ссылка на визуализацию/схему кейса (граф связей, майнд-карта)",
+    extraPlaceholder: "https://… (Maltego, Obsidian graph, MindMeister…)",
+  },
+  "osint-reveal": {
+    hint: "Вы раскрываете чужой/анонимный кейс: вставьте код в материал с раскрытием. Приложите ссылку на граф связей — «паутинку», по которой работали.",
+    extraLabel: "Ссылка на граф связей («паутинка» раскрытия)",
+    extraPlaceholder: "https://… (карта связей, скриншот визуализации)",
+  },
+  design: {
+    hint: "Для артов GitHub не нужен: вставьте код в описание поста с работой (ArtStation, Behance, VK, Telegram-канал) — или пришлите скриншот процесса (слои PSD/Figma).",
+    extraLabel: "Ссылка на скриншот/визуализацию процесса (слои, исходник)",
+    extraPlaceholder: "https://… (Figma, Imgur, пост с исходником)",
+  },
+  "design-project": {
+    hint: "Вставьте код в описание проекта на Behance/Dribbble/Notion. Приложите ссылку на макет с историей версий — это докажет работу.",
+    extraLabel: "Ссылка на макет с версиями (Figma/Figma history, Sketch)",
+    extraPlaceholder: "https://figma.com/file/…",
+  },
+  architecture: {
+    hint: "Вставьте код в пояснительную записку или на чертёж (штамп). Приложите ссылку на PDF/просмотр проекта.",
+    extraLabel: "Ссылка на проект/визуализацию (PDF, просмотр чертежа)",
+    extraPlaceholder: "https://… (PDF, облачный просмотр)",
+  },
+  script: {
+    hint: "Разместите код в README репозитория или в комментарии в самом скрипте — и укажите ссылку.",
+    extraLabel: "",
+    extraPlaceholder: "",
+  },
+  custom: {
+    hint: "Разместите код там, где доказывается ваше авторство: README, описание публикации, закреп канала. Укажите ссылку на это место.",
+    extraLabel: "",
+    extraPlaceholder: "",
+  },
+};
+
+/** Короткие подписи для карточек (где не нужен полный WORK_TYPES). */
+export const WORK_TYPE_LABELS: Record<string, string> = Object.fromEntries(WORK_TYPES.map((t) => [t.id, t.label]));
 
 export type Work = {
   id: string;
@@ -38,6 +106,7 @@ export type Work = {
   links: WorkLink[];     // до 3 ссылок
   verifyToken: string;   // код для подтверждения собственности
   verifyUrl: string;     // где размещён код
+  verifyExtra: string;   // доп. ссылка по типу работы (граф кейса, скриншот слоёв, макет)
   verifyStatus: "unverified" | "pending" | "verified";
   verifyNote: string;    // результат автопроверки
   createdAt: string;
@@ -93,6 +162,7 @@ function rowToWork(r: Record<string, unknown>): Work {
     links: (r.links as WorkLink[]) ?? [],
     verifyToken: r.verify_token as string,
     verifyUrl: (r.verify_url as string) ?? "",
+    verifyExtra: (r.verify_extra as string) ?? "",
     verifyStatus: (r.verify_status as Work["verifyStatus"]) ?? "unverified",
     verifyNote: (r.verify_note as string) ?? "",
     createdAt: (r.created_at as Date).toISOString(),
@@ -102,14 +172,14 @@ function rowToWork(r: Record<string, unknown>): Work {
 
 export async function createWork(w: Omit<Work, "id" | "verifyToken" | "verifyStatus" | "verifyNote" | "createdAt" | "updatedAt"> & { verifyToken: string }): Promise<Work> {
   const now = new Date().toISOString();
-  const full: Work = { ...w, typeCustom: w.typeCustom ?? "", id: `w_${randomBytes(6).toString("hex")}`, verifyStatus: "unverified", verifyNote: "", createdAt: now, updatedAt: now };
+  const full: Work = { ...w, typeCustom: w.typeCustom ?? "", verifyExtra: w.verifyExtra ?? "", id: `w_${randomBytes(6).toString("hex")}`, verifyStatus: "unverified", verifyNote: "", createdAt: now, updatedAt: now };
   if (dbEnabled()) {
     await ensureTablesSafe();
     await getPool().query(
-      `INSERT INTO works (id, user_id, type, type_custom, title, summary, details, team, stack, budget, potential, links, verify_token, verify_url, verify_status, verify_note, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+      `INSERT INTO works (id, user_id, type, type_custom, title, summary, details, team, stack, budget, potential, links, verify_token, verify_url, verify_extra, verify_status, verify_note, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
       [full.id, full.userId, full.type, full.typeCustom, full.title, full.summary, full.details, full.team, full.stack,
-       full.budget, full.potential, JSON.stringify(full.links), full.verifyToken, full.verifyUrl,
+       full.budget, full.potential, JSON.stringify(full.links), full.verifyToken, full.verifyUrl, full.verifyExtra,
        full.verifyStatus, full.verifyNote, full.createdAt, full.updatedAt]
     );
   } else {
@@ -128,10 +198,10 @@ export async function updateWork(id: string, patch: Partial<Work>): Promise<Work
     await ensureTablesSafe();
     await getPool().query(
       `UPDATE works SET type=$2, type_custom=$3, title=$4, summary=$5, details=$6, team=$7, stack=$8, budget=$9,
-        potential=$10, links=$11, verify_url=$12, verify_status=$13, verify_note=$14, updated_at=$15
+        potential=$10, links=$11, verify_url=$12, verify_extra=$13, verify_status=$14, verify_note=$15, updated_at=$16
        WHERE id=$1`,
       [next.id, next.type, next.typeCustom, next.title, next.summary, next.details, next.team, next.stack, next.budget,
-       next.potential, JSON.stringify(next.links), next.verifyUrl, next.verifyStatus, next.verifyNote, next.updatedAt]
+       next.potential, JSON.stringify(next.links), next.verifyUrl, next.verifyExtra, next.verifyStatus, next.verifyNote, next.updatedAt]
     );
   } else {
     const store = await fileRead();

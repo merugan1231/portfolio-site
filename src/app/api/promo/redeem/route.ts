@@ -33,14 +33,17 @@ export async function POST(request: Request) {
   if (!existing) {
     return NextResponse.json({ error: "Промокод не найден" }, { status: 404 });
   }
-  if (existing.usedBy) {
-    return NextResponse.json({ error: "Этот промокод уже активирован" }, { status: 409 });
+  if (existing.maxUses > 0 && existing.uses >= existing.maxUses) {
+    return NextResponse.json({ error: "У промокода закончились активации" }, { status: 409 });
+  }
+  if (existing.validUntil && new Date(existing.validUntil).getTime() < Date.now()) {
+    return NextResponse.json({ error: "Срок действия промокода истёк" }, { status: 409 });
   }
 
-  // Помечаем код использованным атомарно — повторная активация невозможна
+  // Активируем атомарно: счётчик растёт, пока есть свободные активации и не истёк срок
   const days = await dbRedeemPromoCode(code, user.id);
   if (!days || days < 1) {
-    return NextResponse.json({ error: "Промокод уже активирован" }, { status: 409 });
+    return NextResponse.json({ error: "Промокод больше недоступен (активации закончились или истёк срок)" }, { status: 409 });
   }
 
   // Продлеваем Pro: если активен — от текущего срока, если нет — от сейчас

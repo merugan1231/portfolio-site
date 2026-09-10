@@ -17,6 +17,8 @@ type Found = {
 const ROLES = [
   { id: "developer", label: "Программист", emoji: "💻" },
   { id: "osint", label: "OSINT-аналитик", emoji: "🔍" },
+  { id: "osint-author", label: "Создатель кейсов", emoji: "🕵️" },
+  { id: "osint-revealer", label: "Раскрыватель кейсов", emoji: "🕸️" },
   { id: "designer", label: "Дизайнер", emoji: "🎨" },
   { id: "tester", label: "Тестировщик (QA)", emoji: "🧪" },
   { id: "devops", label: "DevOps", emoji: "⚙️" },

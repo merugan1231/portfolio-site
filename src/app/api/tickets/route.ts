@@ -13,6 +13,7 @@ export async function GET() {
     accountStatus: user.status ?? "active",
     statusLabel: STATUS_LABELS[(user.status ?? "active") as keyof typeof STATUS_LABELS] ?? "активен",
     statusReason: user.statusReason ?? "",
+    statusAt: user.statusAt ?? null,
   });
 }
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type TypeInfo = { id: string; label: string };
+type VerifyHint = { hint: string; extraLabel: string; extraPlaceholder: string };
 
 const input =
   "w-full rounded-xl border border-white/10 bg-zinc-900/70 px-4 py-3 text-white outline-none transition-colors focus:border-indigo-400";
@@ -11,6 +12,7 @@ const input =
 export default function NewWorkPage() {
   const router = useRouter();
   const [types, setTypes] = useState<TypeInfo[]>([]);
+  const [verifyHints, setVerifyHints] = useState<Record<string, VerifyHint>>({});
   const [type, setType] = useState("");
   const [typeCustom, setTypeCustom] = useState("");
   const [title, setTitle] = useState("");
@@ -22,6 +24,8 @@ export default function NewWorkPage() {
   const [potential, setPotential] = useState("");
   const [links, setLinks] = useState<{ label: string; url: string }[]>([{ label: "", url: "" }]);
   const [verifyUrl, setVerifyUrl] = useState("");
+  const [verifyExtra, setVerifyExtra] = useState("");
+  const hint: VerifyHint | undefined = verifyHints[type];
   const [created, setCreated] = useState<{ id: string; verifyToken: string; verifyStatus: string; verifyNote: string } | null>(null);
   const [limitReached, setLimitReached] = useState(false);
   const [error, setError] = useState("");
@@ -37,6 +41,7 @@ export default function NewWorkPage() {
       .then((r) => r.json())
       .then((d) => {
         setTypes(d.types ?? []);
+        setVerifyHints(d.verifyHints ?? {});
         if (d.types?.length) setType(d.types[0].id);
       })
       .catch(() => {});
@@ -52,7 +57,7 @@ export default function NewWorkPage() {
     const res = await fetch("/api/works", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type, typeCustom, title, summary, details, team, stack, budget, potential, links, verifyUrl }),
+      body: JSON.stringify({ type, typeCustom, title, summary, details, team, stack, budget, potential, links, verifyUrl, verifyExtra }),
     });
     const body = await res.json().catch(() => ({}));
     setSaving(false);
@@ -242,11 +247,15 @@ export default function NewWorkPage() {
         <div className="rounded-xl border border-white/10 bg-black/30 p-4">
           <label className="mb-1.5 block text-sm font-medium text-white">Подтверждение авторства</label>
           <p className="text-xs leading-relaxed text-zinc-400">
-            После создания работы вы получите уникальный код. Вставьте его в README репозитория, описание проекта
-            или закреплённый пост — и укажите здесь ссылку на это место. Сервис сам проверит код и подтвердит авторство.
-            Закрытые страницы проверяет владелец сервиса вручную.
+            После создания работы вы получите уникальный код. {hint?.hint ?? "Вставьте его там, где доказывается ваше авторство, — и укажите ссылку на это место."} Сервис сам проверит код и подтвердит авторство. Закрытые страницы проверяет владелец сервиса вручную.
           </p>
           <input value={verifyUrl} onChange={(e) => setVerifyUrl(e.target.value)} className={`${input} mt-3`} placeholder="https://github.com/you/project (где будет код)" />
+          {hint?.extraLabel && (
+            <div className="mt-3">
+              <label className="mb-1.5 block text-xs font-medium text-lime-300/90">{hint.extraLabel}</label>
+              <input value={verifyExtra} onChange={(e) => setVerifyExtra(e.target.value)} className={input} placeholder={hint.extraPlaceholder} />
+            </div>
+          )}
         </div>
 
         {error && <p className="text-sm text-red-400">{error}</p>}

@@ -8,8 +8,9 @@ import { AudienceSection } from "@/components/AudienceSection";
 export const dynamic = "force-dynamic";
 
 const TYPE_LABELS: Record<string, string> = {
-  site: "Сайт", webapp: "Веб-приложение", bot: "Телеграм-бот", mobile: "Мобильное приложение",
-  osint: "OSINT", design: "Дизайн", script: "Скрипт",
+  site: "Сайт / лендинг", webapp: "Веб-приложение", bot: "Телеграм-бот", mobile: "Мобильное приложение",
+  osint: "OSINT-расследование (кейс)", "osint-reveal": "OSINT-раскрытие кейса", design: "Дизайн / иллюстрация",
+  "design-project": "Дизайн-проект (UI/UX, брендинг)", architecture: "Архитектура / проектирование", script: "Скрипт / автоматизация", custom: "Свой вариант",
 };
 
 function workTypeLabel(w: Work): string {

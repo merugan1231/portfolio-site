@@ -70,6 +70,8 @@ export const BIO_DETAIL_IDS = BIO_DETAIL_FIELDS.map((f) => f.id) as BioDetailId[
 export const USER_ROLES = [
   { id: "developer", label: "Программист", emoji: "💻" },
   { id: "osint", label: "OSINT-аналитик", emoji: "🔍" },
+  { id: "osint-author", label: "Создатель кейсов", emoji: "🕵️" },
+  { id: "osint-revealer", label: "Раскрыватель кейсов", emoji: "🕸️" },
   { id: "designer", label: "Дизайнер", emoji: "🎨" },
   { id: "tester", label: "Тестировщик (QA)", emoji: "🧪" },
   { id: "devops", label: "DevOps", emoji: "⚙️" },

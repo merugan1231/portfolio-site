@@ -110,6 +110,19 @@ export async function findUserByEmail(email: string): Promise<StoredUser | undef
   return users.find((u) => u.email && u.email === email.toLowerCase());
 }
 
+export async function findUserById(id: string): Promise<StoredUser | undefined> {
+  const users = await getUsers();
+  return users.find((u) => u.id === id);
+}
+
+export async function findUsernameRequest(id: string): Promise<DbUsernameRequest | null> {
+  if (dbEnabled()) {
+    const { dbGetUsernameRequest } = await import("./db");
+    return dbGetUsernameRequest(id);
+  }
+  return memUsernameRequests.find((r) => r.id === id) ?? null;
+}
+
 /**
  * Полное удаление аккаунта: пользователь, его работы и отзывы на них,
  * его отзывы на чужие работы, сессии и коды подтверждения.
@@ -213,6 +226,10 @@ import {
   dbCreateTicket, dbListTicketsByUser, dbListAllTickets, dbUpdateTicket,
   type DbTicket,
 } from "./db";
+import {
+  dbCreateUsernameRequest, dbListUsernameRequests, dbListUsernameRequestsByUser, dbUpdateUsernameRequest,
+  type DbUsernameRequest,
+} from "./db";
 
 export type Ticket = DbTicket;
 const memTickets: Ticket[] = [];
@@ -256,4 +273,46 @@ export function resolveTicket(id: string, status: "resolved" | "dismissed", admi
 
 // re-export для совместимости
 export { dbEnabled, kvGet, kvSet, kvDel };
-export type { DbUser };
+export type { DbUser, DbUsernameRequest };
+
+// ---------- Запросы на смену юзернейма (обёртки; в файловом режиме — в памяти) ----------
+
+const memUsernameRequests: DbUsernameRequest[] = [];
+
+export function createUsernameRequest(t: { userId: string; userLogin: string; currentUsername: string; requestedUsername: string; id: string }): Promise<DbUsernameRequest> {
+  if (dbEnabled()) return dbCreateUsernameRequest(t);
+  const req: DbUsernameRequest = {
+    ...t,
+    status: "open",
+    adminReply: "",
+    handledBy: "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  memUsernameRequests.unshift(req);
+  return Promise.resolve(req);
+}
+
+export function listUsernameRequests(): Promise<DbUsernameRequest[]> {
+  return dbEnabled()
+    ? dbListUsernameRequests()
+    : Promise.resolve([...memUsernameRequests].sort((a, b) => Number(b.status === "open") - Number(a.status === "open")));
+}
+
+export function listUsernameRequestsByUser(userId: string): Promise<DbUsernameRequest[]> {
+  return dbEnabled()
+    ? dbListUsernameRequestsByUser(userId)
+    : Promise.resolve(memUsernameRequests.filter((r) => r.userId === userId));
+}
+
+export function updateUsernameRequest(id: string, status: DbUsernameRequest["status"], adminReply: string, handledBy: string): Promise<DbUsernameRequest | null> {
+  if (dbEnabled()) return dbUpdateUsernameRequest(id, status, adminReply, handledBy);
+  const r = memUsernameRequests.find((x) => x.id === id) ?? null;
+  if (r) {
+    r.status = status;
+    r.adminReply = adminReply;
+    r.handledBy = handledBy;
+    r.updatedAt = new Date().toISOString();
+  }
+  return Promise.resolve(r);
+}
