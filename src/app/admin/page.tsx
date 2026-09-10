@@ -193,6 +193,41 @@ export default function AdminPage() {
   const [statusError, setStatusError] = useState("");
   const [statusBusy, setStatusBusy] = useState(false);
 
+  // ---- Прямая смена юзернейма пользователя ----
+  const [usernameTarget, setUsernameTarget] = useState<AdminUser | null>(null);
+  const [newUsername, setNewUsername] = useState("");
+  const [usernameError, setUsernameError] = useState("");
+  const [usernameBusy, setUsernameBusy] = useState(false);
+
+  const openUsernameEdit = (u: AdminUser) => {
+    setUsernameTarget(u);
+    setNewUsername(u.username ?? "");
+    setUsernameError("");
+  };
+
+  const applyUsername = useCallback(
+    async (userId: string, username: string) => {
+      setUsernameBusy(true);
+      setUsernameError("");
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_username", userId, username }),
+      });
+      const body = await res.json().catch(() => ({}));
+      setUsernameBusy(false);
+      if (!res.ok) {
+        setUsernameError(body.error ?? "Не удалось сменить юзернейм");
+        return;
+      }
+      setUsernameTarget(null);
+      setNotice(`✓ Юзернейм изменён на @${username}`);
+      setTimeout(() => setNotice(""), 4000);
+      loadAll();
+    },
+    [loadAll]
+  );
+
   const applyStatus = useCallback(
     async (userId: string, status: "frozen" | "blocked" | "active", reason: string) => {
       setStatusBusy(true);
@@ -495,11 +530,12 @@ export default function AdminPage() {
       ) : (
         /* ---- Пользователи: тариф, статус, роли администрации ---- */
         <section className="card overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
+          <table className="w-full min-w-[860px] text-left text-sm">
             <thead>
               <tr className="border-b border-white/10 text-xs uppercase tracking-wider text-zinc-500">
                 <th className="px-4 py-4">Логин</th>
                 <th className="px-4 py-4">Email</th>
+                <th className="px-4 py-4">Юзернейм</th>
                 <th className="px-4 py-4">Роль</th>
                 <th className="px-4 py-4">Статус</th>
                 <th className="px-4 py-4">Тариф</th>
@@ -525,6 +561,23 @@ export default function AdminPage() {
                     )}
                   </td>
                   <td className="px-4 py-4 text-zinc-400">{u.email || "—"}</td>
+                  <td className="px-4 py-4">
+                    {u.username ? (
+                      <span className="text-zinc-300">@{u.username}</span>
+                    ) : (
+                      <span className="text-zinc-600">не задан</span>
+                    )}
+                    {!isCreatorRow && (
+                      <div className="mt-1">
+                        <button
+                          onClick={() => openUsernameEdit(u)}
+                          className="text-xs text-zinc-500 underline-offset-2 transition-colors hover:text-indigo-300 hover:underline"
+                        >
+                          {u.username ? "сменить юз" : "задать юз"}
+                        </button>
+                      </div>
+                    )}
+                  </td>
                   <td className="px-4 py-4">
                     {u.role === "creator" ? "Создатель" : u.role === "admin" ? "Администратор" : "Пользователь"}
                     {myRole === "creator" && canTouch && (
@@ -636,6 +689,37 @@ export default function AdminPage() {
       {tab === "tickets" && <TicketsTab tickets={tickets} onAction={loadAll} />}
 
       {tab === "usernames" && <UsernameRequestsTab requests={usernameRequests} onAction={loadAll} />}
+
+      {/* Модалка смены юзернейма */}
+      {usernameTarget && (
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="modal-panel card w-full max-w-md p-6">
+            <h3 className="text-lg font-bold text-white">Сменить юзернейм — {usernameTarget.login}</h3>
+            <p className="mt-2 text-sm text-zinc-400">
+              Текущий: <span className="text-zinc-200">{usernameTarget.username ? `@${usernameTarget.username}` : "не задан"}</span>. Новый должен быть свободен и проходить правила (от 5 символов, начинается и заканчивается буквой).
+            </p>
+            <input
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+              placeholder="новый юзернейм"
+              className="mt-4 w-full rounded-xl border border-white/10 bg-zinc-900/70 px-4 py-3 text-white outline-none transition-colors focus:border-indigo-400"
+            />
+            {usernameError && <p className="mt-2 text-sm text-red-400">{usernameError}</p>}
+            <div className="mt-4 flex gap-3">
+              <button
+                onClick={() => applyUsername(usernameTarget.id, newUsername.trim())}
+                disabled={usernameBusy}
+                className="btn btn-primary text-sm disabled:opacity-50"
+              >
+                {usernameBusy ? "Применяю…" : "Сменить"}
+              </button>
+              <button onClick={() => setUsernameTarget(null)} className="btn btn-ghost text-sm">
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Модалка причины заморозки/блокировки */}
       {statusTarget && (

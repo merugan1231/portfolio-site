@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { getUsers, saveUser } from "@/lib/storage";
+import { getUsers, saveUser, findUserByUsername } from "@/lib/storage";
 import { getCurrentUser } from "@/lib/current-user";
-import { isPro, isCreator, isStaff, STATUS_LABELS } from "@/lib/users";
+import { isPro, isCreator, isStaff, STATUS_LABELS, USERNAME_RE, USERNAME_RULE } from "@/lib/users";
 
 export async function GET() {
   const me = await getCurrentUser();
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Доступ только для администрации" }, { status: 403 });
   }
 
-  let body: { action?: string; userId?: string; role?: string; status?: string; reason?: string };
+  let body: { action?: string; userId?: string; role?: string; status?: string; reason?: string; username?: string };
   try {
     body = await request.json();
   } catch {
@@ -62,6 +62,24 @@ export async function POST(request: Request) {
     next.role = body.role === "admin" ? "admin" : "user";
     await saveUser(next);
     return NextResponse.json({ ok: true, role: next.role });
+  }
+
+  // Прямая смена юзернейма админом (модерация): в обход запросов пользователя
+  if (body.action === "set_username") {
+    const username = String(body.username ?? "").trim();
+    if (!USERNAME_RE.test(username)) {
+      return NextResponse.json({ error: `Юзернейм: ${USERNAME_RULE}` }, { status: 400 });
+    }
+    if (username.toLowerCase() === (target.username ?? "").toLowerCase()) {
+      return NextResponse.json({ error: "Это текущий юзернейм пользователя" }, { status: 400 });
+    }
+    const taken = await findUserByUsername(username);
+    if (taken && taken.id !== target.id) {
+      return NextResponse.json({ error: "Этот юзернейм уже занят" }, { status: 409 });
+    }
+    next.username = username;
+    await saveUser(next);
+    return NextResponse.json({ ok: true, username: next.username });
   }
 
   if (body.action === "set_status") {

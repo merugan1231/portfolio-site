@@ -77,9 +77,8 @@ export default function SearchPage() {
         autoFocus
       />
 
-      {/* Фильтры по ролям */}
-      <div className="-mx-4 mt-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:overflow-visible sm:px-0">
-        <div className="flex gap-2">
+      {/* Фильтры по ролям — переносятся на новую строку, не уходят за рамки страницы */}
+      <div className="mt-4 flex flex-wrap gap-2">
         <button
           onClick={() => setRole("")}
           className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
@@ -103,7 +102,6 @@ export default function SearchPage() {
             {r.emoji} {r.label}
           </button>
         ))}
-        </div>
       </div>
 
       <div className="mt-6 space-y-3">
