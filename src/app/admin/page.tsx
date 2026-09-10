@@ -283,7 +283,7 @@ export default function AdminPage() {
     "w-full rounded-xl border border-white/10 bg-zinc-900/70 px-4 py-2.5 text-sm text-white outline-none transition-colors focus:border-indigo-400";
 
   return (
-    <div className="mx-auto w-full max-w-4xl flex-1 px-6 py-10">
+    <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-white">Панель управления</h1>
@@ -300,31 +300,33 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Вкладки */}
-      <div className="mb-8 flex gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5">
-        {(
-          [
-            ["portfolio", "Портфолио"],
-            ["users", `Пользователи (${users.length})`],
-            ["moderation", `Модерация (${disputed.length + worksPending.length})`],
-            ["tickets", `Тикеты (${tickets.filter((t) => t.status === "open").length})`],
-            ...(myRole === "creator"
-              ? [["promo", `Промокоды (${promoCodes.filter((c) => !c.usedBy).length})`] as const]
-              : []),
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-300 ${
-              tab === key
-                ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
-                : "text-zinc-400 hover:bg-white/5 hover:text-white"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+      {/* Вкладки — на телефоне прокручиваются вбок, не ломая сетку */}
+      <div className="-mx-4 mb-6 overflow-x-auto px-4 pb-1 sm:mx-0 sm:mb-8 sm:overflow-visible sm:px-0">
+        <div className="flex gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5">
+          {(
+            [
+              ["portfolio", "Портфолио"],
+              ["users", `Пользователи (${users.length})`],
+              ["moderation", `Модерация (${disputed.length + worksPending.length})`],
+              ["tickets", `Тикеты (${tickets.filter((t) => t.status === "open").length})`],
+              ...(myRole === "creator"
+                ? [["promo", `Промокоды (${promoCodes.filter((c) => !c.usedBy).length})`] as const]
+                : []),
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`shrink-0 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-300 sm:flex-1 sm:px-4 ${
+                tab === key
+                  ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
+                  : "text-zinc-400 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {tab === "portfolio" ? (
@@ -473,7 +475,7 @@ export default function AdminPage() {
       ) : (
         /* ---- Пользователи: тариф, статус, роли администрации ---- */
         <section className="card overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full min-w-[760px] text-left text-sm">
             <thead>
               <tr className="border-b border-white/10 text-xs uppercase tracking-wider text-zinc-500">
                 <th className="px-4 py-4">Логин</th>
@@ -615,8 +617,8 @@ export default function AdminPage() {
 
       {/* Модалка причины заморозки/блокировки */}
       {statusTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="card w-full max-w-md p-6">
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="modal-panel card max-h-[88dvh] w-full max-w-md overflow-y-auto p-6">
             <h3 className="text-lg font-bold text-white">
               {statusKind === "blocked" ? "🔒 Заблокировать" : "🧊 Заморозить"} пользователя {statusTarget.login}
             </h3>
@@ -804,7 +806,7 @@ function PromoTab({ codes, onAction }: { codes: PromoCode[]; onAction: () => voi
       <section>
         <h2 className="text-lg font-semibold text-white">Все промокоды</h2>
         <div className="mt-4 overflow-x-auto rounded-2xl border border-white/10">
-          <table className="w-full text-left text-sm">
+          <table className="w-full min-w-[560px] text-left text-sm">
             <thead>
               <tr className="border-b border-white/10 bg-white/[0.02] text-xs uppercase tracking-wider text-zinc-500">
                 <th className="px-4 py-3">Код</th>

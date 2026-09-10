@@ -119,16 +119,16 @@ export function AudienceSection() {
   const [open, setOpen] = useState<Audience | null>(null);
 
   return (
-    <section className="mx-auto w-full max-w-6xl px-6 py-20">
-      <h2 className="reveal text-3xl font-bold tracking-tight text-white sm:text-4xl">
+    <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
+      <h2 className="reveal text-2xl font-bold tracking-tight text-white sm:text-4xl">
         Для кого DevShelf
       </h2>
-      <div className="mt-8 flex flex-wrap gap-3">
+      <div className="mt-6 flex flex-wrap gap-2 sm:mt-8 sm:gap-3">
         {AUDIENCE.map((a, i) => (
           <button
             key={a.chip}
             onClick={() => setOpen(a)}
-            className="reveal card cursor-pointer px-4 py-2 text-sm font-medium text-zinc-200 transition-colors hover:!border-lime-300/50 hover:text-white"
+            className="reveal card cursor-pointer px-3.5 py-2 text-xs font-medium text-zinc-200 transition-colors hover:!border-lime-300/50 hover:text-white sm:px-4 sm:text-sm"
             style={{ transitionDelay: `${i * 40}ms` }}
           >
             {a.emoji} {a.chip}
@@ -138,13 +138,13 @@ export function AudienceSection() {
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
           onClick={() => setOpen(null)}
           role="dialog"
           aria-modal="true"
         >
           <div
-            className="card relative max-h-[85vh] w-full max-w-lg overflow-y-auto p-8"
+            className="modal-panel card relative max-h-[85dvh] w-full max-w-lg overflow-y-auto p-6 sm:p-8"
             onClick={(e) => e.stopPropagation()}
           >
             <button

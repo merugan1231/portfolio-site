@@ -24,18 +24,18 @@ export default async function ExplorePage({
   );
 
   return (
-    <section className="mx-auto w-full max-w-5xl flex-1 px-6 py-12">
+    <section className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
       <div className="glow left-[-80px] top-[-60px] h-72 w-72 bg-lime-400" />
       <p className="text-xs uppercase tracking-[0.3em] text-lime-300">DevShelf · галерея сообщества</p>
-      <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+      <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-white sm:text-5xl">
         Все работы наших пользователей
       </h1>
-      <p className="mt-4 max-w-2xl text-lg text-zinc-400">
+      <p className="mt-4 max-w-2xl text-base text-zinc-400 sm:text-lg">
         Каждый проект здесь прошёл подтверждение авторства. Ищите по названию, описанию или стеку, фильтруйте по типу.
       </p>
 
       {/* Поиск и фильтры */}
-      <form className="mt-8 flex flex-col gap-3 sm:flex-row" action="/explore">
+      <form className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row" action="/explore">
         <input
           name="q"
           defaultValue={q}
@@ -60,7 +60,7 @@ export default async function ExplorePage({
       </p>
 
       {/* Сетка работ */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 sm:gap-4">
         {withRatings.map((w) => {
           const author = authors[w.userId];
           return (

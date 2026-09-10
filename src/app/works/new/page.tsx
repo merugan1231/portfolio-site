@@ -137,13 +137,13 @@ export default function NewWorkPage() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-3xl flex-1 px-6 py-12">
-      <h1 className="text-3xl font-extrabold text-white">Новая работа</h1>
+    <section className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
+      <h1 className="text-2xl font-extrabold text-white sm:text-3xl">Новая работа</h1>
       <p className="mt-1 text-sm text-zinc-400">
         Заполните пункты — так заинтересованные люди смогут подробно узнать о проекте.
       </p>
 
-      <div className="card mt-8 space-y-5 p-6">
+      <div className="card mt-6 space-y-5 p-5 sm:mt-8 sm:p-6">
         <div>
           <label className="mb-1.5 block text-sm text-zinc-400">Тип работы</label>
           <select value={type} onChange={(e) => setType(e.target.value)} className={input}>
@@ -207,7 +207,7 @@ export default function NewWorkPage() {
           <label className="mb-1.5 block text-sm text-zinc-400">Ссылки на работу * (до 3: сайт, репозиторий, кейс)</label>
           <div className="space-y-3">
             {links.map((l, i) => (
-              <div key={i} className="flex gap-2">
+              <div key={i} className="flex flex-col gap-2 sm:flex-row">
                 <input
                   value={l.label}
                   onChange={(e) => setLinks(links.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
@@ -221,7 +221,11 @@ export default function NewWorkPage() {
                   placeholder="https://…"
                 />
                 {links.length > 1 && (
-                  <button onClick={() => setLinks(links.filter((_, j) => j !== i))} className="rounded-xl border border-white/10 px-3 text-red-400 hover:bg-white/5" aria-label="Удалить ссылку">
+                  <button
+                    onClick={() => setLinks(links.filter((_, j) => j !== i))}
+                    className="rounded-xl border border-white/10 px-3 py-2.5 text-red-400 transition-colors hover:bg-white/5 sm:py-0"
+                    aria-label="Удалить ссылку"
+                  >
                     ✕
                   </button>
                 )}

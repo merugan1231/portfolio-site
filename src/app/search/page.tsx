@@ -61,8 +61,8 @@ export default function SearchPage() {
   const roleLabel = (id: string) => ROLES.find((r) => r.id === id);
 
   return (
-    <section className="mx-auto w-full max-w-3xl flex-1 px-6 py-12">
-      <h1 className="text-3xl font-extrabold text-white">Люди</h1>
+    <section className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
+      <h1 className="text-2xl font-extrabold text-white sm:text-3xl">Люди</h1>
       <p className="mt-1 text-sm text-zinc-400">
         Найдите пользователя по юзернейму или отфильтруйте по роли — программисты, осинтеры, дизайнеры и другие.
       </p>
@@ -76,7 +76,8 @@ export default function SearchPage() {
       />
 
       {/* Фильтры по ролям */}
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="-mx-4 mt-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:overflow-visible sm:px-0">
+        <div className="flex gap-2">
         <button
           onClick={() => setRole("")}
           className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
@@ -91,7 +92,7 @@ export default function SearchPage() {
           <button
             key={r.id}
             onClick={() => setRole(role === r.id ? "" : r.id)}
-            className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
+            className={`shrink-0 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
               role === r.id
                 ? "border-lime-300/50 bg-lime-300/15 text-lime-200"
                 : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-white/20 hover:text-zinc-200"
@@ -100,6 +101,7 @@ export default function SearchPage() {
             {r.emoji} {r.label}
           </button>
         ))}
+        </div>
       </div>
 
       <div className="mt-6 space-y-3">

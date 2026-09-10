@@ -26,13 +26,13 @@ function Exhibit({ p, index }: { p: Project; index: number }) {
   const accent = accentFor(p.tags);
   return (
     <article
-      className="reveal group relative grid gap-6 md:grid-cols-[auto_1fr] md:gap-10"
+      className="reveal group relative grid gap-4 md:grid-cols-[auto_1fr] md:gap-10"
       style={{ transitionDelay: `${(index % 3) * 80}ms` }}
     >
       {/* Крупный год и цветовая полоса */}
       <div className={`flex items-center gap-4 md:flex-col md:items-stretch md:gap-3 ${reversed ? "md:order-2" : ""}`}>
         <span className={`h-1 w-10 rounded-full md:h-auto md:w-1 md:self-stretch ${accent}`} />
-        <span className="select-none text-5xl font-extrabold leading-none text-white/10 transition-colors duration-300 group-hover:text-white/20 sm:text-6xl md:text-7xl">
+        <span className="select-none text-4xl font-extrabold leading-none text-white/10 transition-colors duration-300 group-hover:text-white/20 sm:text-6xl md:text-7xl">
           {p.year}
         </span>
         <span className="text-xs uppercase tracking-[0.25em] text-zinc-600 md:[writing-mode:vertical-rl]">
@@ -41,16 +41,16 @@ function Exhibit({ p, index }: { p: Project; index: number }) {
       </div>
 
       {/* Тело экспоната */}
-      <div className={`card p-7 transition-transform duration-300 group-hover:-translate-y-1 ${reversed ? "md:border-l-2" : "md:border-r-2"}`}>
+      <div className={`card p-5 transition-transform duration-300 group-hover:-translate-y-1 sm:p-7 ${reversed ? "md:border-l-2" : "md:border-r-2"}`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <h2 className="text-2xl font-bold text-white transition-colors group-hover:text-lime-300">
+          <h2 className="text-xl font-bold text-white transition-colors group-hover:text-lime-300 sm:text-2xl">
             {p.title}
           </h2>
           <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-400 md:hidden">
             {p.year}
           </span>
         </div>
-        <p className="mt-3 max-w-3xl leading-relaxed text-zinc-400">{p.description}</p>
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-zinc-400 sm:text-base">{p.description}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           {p.tags.map((t) => (
             <span key={t} className={`rounded-md px-2.5 py-1 text-xs font-medium text-black/80 ${accent}`}>
@@ -79,21 +79,23 @@ export default async function ProjectsPage() {
   const { projects } = await getPortfolio();
 
   return (
-    <section className="relative mx-auto w-full max-w-5xl flex-1 px-6 py-16">
+    <section className="relative mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6 sm:py-16">
       <div className="glow right-[-80px] top-[-60px] h-72 w-72 bg-indigo-500" />
 
       {/* Шапка-афиша */}
       <div className="relative">
         <p className="text-xs uppercase tracking-[0.3em] text-lime-300">DevShelf · витрина сервиса</p>
-        <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+        <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-white sm:text-5xl">
           Лучшие работы наших пользователей
         </h1>
-        <p className="mt-4 max-w-2xl text-lg text-zinc-400">
+        <p className="mt-4 max-w-2xl text-base text-zinc-400 sm:text-lg">
           Отобранные проекты сообщества: сайты, боты, OSINT-кейсы, дизайн. Листайте вниз — каждая работа с годом, тегами и ссылками.
         </p>
-        <div className="mt-6 flex flex-wrap items-center gap-3 text-sm text-zinc-500">
-          <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-lime-300" />
-          Работ в витрине: {projects.length}
+        <div className="mt-6 flex flex-col items-start gap-2 text-sm text-zinc-500 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+          <span className="inline-flex items-center gap-2">
+            <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-lime-300" />
+            Работ в витрине: {projects.length}
+          </span>
           <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1 text-xs font-medium text-amber-200">
             🧪 Демо-версия раздела — оформление и наполнение могут меняться
           </span>
@@ -101,7 +103,7 @@ export default async function ProjectsPage() {
       </div>
 
       {/* Лента экспонатов */}
-      <div className="relative mt-14 space-y-14">
+      <div className="relative mt-10 space-y-10 sm:mt-14 sm:space-y-14">
         <div className="absolute bottom-0 left-[7px] top-2 hidden w-px bg-gradient-to-b from-lime-300/40 via-white/10 to-transparent md:block" aria-hidden />
         {projects.map((p, i) => (
           <Exhibit key={p.id} p={p} index={i} />
@@ -113,7 +115,7 @@ export default async function ProjectsPage() {
       )}
 
       {/* Финал витрины */}
-      <div className="card reveal mt-16 flex flex-col items-center gap-4 p-10 text-center">
+      <div className="card reveal mt-12 flex flex-col items-center gap-4 p-7 text-center sm:mt-16 sm:p-10">
         <p className="text-2xl font-bold text-white">Хотите видеть свою работу здесь?</p>
         <p className="max-w-md text-sm text-zinc-400">
           Опубликуйте проект, подтвердите авторство и получите оценки сообщества — лучшие попадают на витрину.

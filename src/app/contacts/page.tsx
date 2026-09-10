@@ -4,7 +4,7 @@ export const metadata: Metadata = { title: "Контакты" };
 
 export default function ContactsPage() {
   return (
-    <section className="relative mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+    <section className="relative mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6 sm:py-16">
       <div className="glow left-1/2 top-[-80px] h-72 w-72 -translate-x-1/2 bg-lime-400" />
       <div className="relative text-center">
         <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">

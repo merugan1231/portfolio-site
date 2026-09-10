@@ -96,15 +96,15 @@ export default function TicketsPage() {
   const restricted = accountStatus === "frozen" || accountStatus === "blocked";
 
   return (
-    <section className="mx-auto w-full max-w-3xl flex-1 px-6 py-12">
-      <h1 className="text-3xl font-extrabold text-white">Тикеты</h1>
+    <section className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
+      <h1 className="text-2xl font-extrabold text-white sm:text-3xl">Тикеты</h1>
       <p className="mt-1 text-sm text-zinc-400">
         Обращения к администрации: оспаривание модерации, вопросы, жалобы. Ответ появится здесь же.
       </p>
 
       {/* Баннер при заморозке/блокировке */}
       {restricted && (
-        <div className={`mt-6 rounded-2xl border p-6 ${accountStatus === "blocked" ? "border-red-400/30 bg-red-500/10" : "border-amber-300/30 bg-amber-500/10"}`}>
+        <div className={`mt-6 rounded-2xl border p-5 sm:p-6 ${accountStatus === "blocked" ? "border-red-400/30 bg-red-500/10" : "border-amber-300/30 bg-amber-500/10"}`}>
           <h2 className={`text-lg font-bold ${accountStatus === "blocked" ? "text-red-300" : "text-amber-200"}`}>
             {accountStatus === "blocked" ? "🔒 Аккаунт заблокирован" : "🧊 Аккаунт заморожен"}
           </h2>
@@ -123,9 +123,9 @@ export default function TicketsPage() {
       {error && <div className="mt-4 rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-300">{error}</div>}
 
       {/* Форма нового тикета */}
-      <div className="card mt-6 p-6">
+      <div className="card mt-6 p-5 sm:p-6">
         <h2 className="font-bold text-white">Новый тикет</h2>
-        <div className="mt-4 flex gap-2">
+        <div className="mt-4 flex flex-wrap gap-2">
           {(
             [
               ["appeal", "⚖️ Оспорить модерацию"],
@@ -164,12 +164,12 @@ export default function TicketsPage() {
       </div>
 
       {/* Список тикетов */}
-      <h2 className="mt-10 text-lg font-bold text-white">Мои тикеты</h2>
+      <h2 className="mt-8 text-lg font-bold text-white sm:mt-10">Мои тикеты</h2>
       <div className="mt-4 space-y-4">
         {tickets.length === 0 && <p className="text-sm text-zinc-500">Тикетов пока нет.</p>}
         {tickets.map((t) => (
           <div key={t.id} className="card p-5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <span className="font-semibold text-white">{t.subject}</span>
               <span className={`rounded-full border px-2.5 py-1 text-xs ${STATUS_BADGE[t.status].cls}`}>
                 {STATUS_BADGE[t.status].text}

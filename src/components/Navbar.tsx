@@ -61,13 +61,13 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0b0c10]/85 backdrop-blur">
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6">
-        <Link href="/" className="text-lg font-extrabold tracking-tight text-white">
+      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
+        <Link href="/" onClick={() => setOpen(false)} className="text-lg font-extrabold tracking-tight text-white">
           Dev<span className="gradient-text">Shelf</span>
         </Link>
 
-        {/* Десктоп-меню */}
-        <nav className="hidden items-center gap-1 sm:flex">
+        {/* Десктоп-меню (планшет: только логотип + аватар/вход) */}
+        <nav className="hidden items-center gap-1 lg:flex">
           {LINKS.map((l) => (
             <Link
               key={l.href}
@@ -128,11 +128,12 @@ export default function Navbar() {
           )}
         </nav>
 
-        {/* Бургер для мобильных */}
+        {/* Бургер для мобильных и планшетов */}
         <button
           onClick={() => setOpen(!open)}
           aria-label="Меню"
-          className="flex h-10 w-10 flex-col items-center justify-center gap-1.5 rounded-lg border border-white/10 sm:hidden"
+          aria-expanded={open}
+          className="flex h-10 w-10 flex-col items-center justify-center gap-1.5 rounded-lg border border-white/10 transition-colors hover:bg-white/5 lg:hidden"
         >
           <span className={`h-0.5 w-5 bg-white transition-transform ${open ? "translate-y-2 rotate-45" : ""}`} />
           <span className={`h-0.5 w-5 bg-white transition-opacity ${open ? "opacity-0" : ""}`} />
@@ -142,36 +143,66 @@ export default function Navbar() {
 
       {/* Мобильное меню */}
       {open && (
-        <nav className="border-t border-white/10 bg-[#0b0c10] px-6 py-4 sm:hidden">
+        <nav className="mobile-menu max-h-[calc(100dvh-64px)] overflow-y-auto border-t border-white/10 bg-[#0b0c10]/95 px-6 pb-8 pt-4 backdrop-blur lg:hidden">
           <div className="flex flex-col gap-1">
             {LINKS.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
                 onClick={() => setOpen(false)}
-                className={`rounded-lg px-4 py-2.5 text-sm font-medium ${
-                  pathname === l.href ? "text-lime-300" : "text-zinc-400"
+                className={`rounded-xl px-4 py-3 text-base font-medium transition-colors ${
+                  pathname === l.href
+                    ? "bg-lime-300/10 text-lime-300"
+                    : "text-zinc-300 hover:bg-white/5 hover:text-white"
                 }`}
               >
                 {l.label}
               </Link>
             ))}
+
             {me ? (
               <>
-                <Link href="/cabinet" onClick={() => setOpen(false)} className="rounded-lg px-4 py-2.5 text-sm text-zinc-300">
-                  Личный кабинет
+                <div className="mt-3 flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                  <Avatar me={me} size={36} />
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold text-white">
+                      {me.displayName || me.username || me.login}
+                    </div>
+                    {me.username && <div className="truncate text-xs text-zinc-500">@{me.username}</div>}
+                  </div>
+                </div>
+                <Link href="/cabinet" onClick={() => setOpen(false)} className="mt-1 rounded-xl px-4 py-3 text-base text-zinc-300 transition-colors hover:bg-white/5 hover:text-white">
+                  🗄️ Личный кабинет
                 </Link>
-                <Link href="/works/new" onClick={() => setOpen(false)} className="rounded-lg px-4 py-2.5 text-sm text-zinc-300">
-                  Добавить работу
+                {me.username && (
+                  <Link href={`/u/${me.username}`} onClick={() => setOpen(false)} className="rounded-xl px-4 py-3 text-base text-zinc-300 transition-colors hover:bg-white/5 hover:text-white">
+                    🌐 Мой профиль
+                  </Link>
+                )}
+                <Link href="/works/new" onClick={() => setOpen(false)} className="rounded-xl px-4 py-3 text-base text-zinc-300 transition-colors hover:bg-white/5 hover:text-white">
+                  ➕ Добавить работу
                 </Link>
-                <button onClick={logout} className="rounded-lg px-4 py-2.5 text-left text-sm text-red-400">
+                <Link href="/tickets" onClick={() => setOpen(false)} className="rounded-xl px-4 py-3 text-base text-zinc-300 transition-colors hover:bg-white/5 hover:text-white">
+                  🎫 Тикеты
+                </Link>
+                {(me.role === "admin" || me.role === "creator") && (
+                  <Link href="/admin" onClick={() => setOpen(false)} className="rounded-xl px-4 py-3 text-base text-zinc-300 transition-colors hover:bg-white/5 hover:text-white">
+                    🛠️ Админка
+                  </Link>
+                )}
+                <button onClick={logout} className="mt-1 rounded-xl px-4 py-3 text-left text-base text-red-400 transition-colors hover:bg-red-500/10">
                   Выйти
                 </button>
               </>
             ) : (
-              <Link href="/login" onClick={() => setOpen(false)} className="btn btn-ghost mt-2 text-sm">
-                Вход
-              </Link>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Link href="/login" onClick={() => setOpen(false)} className="btn btn-ghost text-sm">
+                  Вход
+                </Link>
+                <Link href="/register" onClick={() => setOpen(false)} className="btn btn-primary text-sm">
+                  Регистрация
+                </Link>
+              </div>
             )}
           </div>
         </nav>

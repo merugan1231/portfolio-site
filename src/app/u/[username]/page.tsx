@@ -92,8 +92,8 @@ export default function PublicProfilePage() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-4xl flex-1 px-6 py-12">
-      <div className="card flex flex-col items-start gap-5 p-8 sm:flex-row sm:items-center">
+    <section className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
+      <div className="card flex flex-col items-start gap-5 p-6 sm:flex-row sm:items-center sm:p-8">
         {profile.avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={profile.avatarUrl} alt="" className="h-20 w-20 rounded-full object-cover" />
@@ -155,10 +155,10 @@ export default function PublicProfilePage() {
         </div>
       )}
 
-      <h2 className="mt-10 text-xl font-bold text-white">
+      <h2 className="mt-8 text-xl font-bold text-white sm:mt-10">
         Подтверждённые работы <span className="text-sm font-normal text-zinc-500">({works.length})</span>
       </h2>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 sm:gap-4">
         {works.length === 0 && <p className="text-sm text-zinc-500">Пока нет подтверждённых работ.</p>}
         {works.map((w) => (
           <Link key={w.id} href={`/works/${w.id}`} className="card block p-5 transition-transform hover:-translate-y-0.5">

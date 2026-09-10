@@ -122,12 +122,12 @@ export default function WorkPage() {
   const isOwner = viewerIsOwner;
 
   return (
-    <section className="mx-auto w-full max-w-4xl flex-1 px-6 py-12">
+    <section className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
       <div className="text-xs uppercase tracking-wide text-zinc-500">
         {work.type === "custom" && work.typeCustom ? work.typeCustom : (TYPE_LABELS[work.type] ?? work.type)}
       </div>
       <div className="mt-1 flex flex-wrap items-center gap-3">
-        <h1 className="text-3xl font-extrabold text-white">{work.title}</h1>
+        <h1 className="text-2xl font-extrabold text-white sm:text-3xl">{work.title}</h1>
         {work.verifyStatus === "verified" && (
           <span className="rounded-full border border-lime-300/30 bg-lime-300/10 px-3 py-1 text-xs text-lime-200">
             ✅ Авторство подтверждено
@@ -159,7 +159,7 @@ export default function WorkPage() {
         </div>
       )}
 
-      <div className="card mt-8 p-6">
+      <div className="card mt-8 p-5 sm:p-6">
         <h2 className="font-bold text-white">Как это было сделано</h2>
         <p className="mt-3 whitespace-pre-line leading-relaxed text-zinc-300">{work.details}</p>
         <dl className="mt-6 grid gap-4 sm:grid-cols-2">

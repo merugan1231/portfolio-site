@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "О сервисе" };
 
 export default function AboutPage() {
   return (
-    <section className="relative mx-auto w-full max-w-4xl flex-1 px-6 py-16">
+    <section className="relative mx-auto w-full max-w-4xl flex-1 px-4 py-10 sm:px-6 sm:py-16">
       <div className="glow left-[-100px] top-[-80px] h-80 w-80 bg-violet-500" />
       <h1 className="relative text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
         О <span className="gradient-text">сервисе</span>

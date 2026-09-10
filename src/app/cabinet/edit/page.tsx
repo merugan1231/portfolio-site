@@ -257,8 +257,8 @@ export default function CabinetPage() {
   const daysOnService = Math.max(1, Math.floor((Date.now() - new Date(profile.memberSince).getTime()) / 86400000) + 1);
 
   return (
-    <section className="mx-auto w-full max-w-6xl flex-1 px-6 py-12">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <section className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
         <div>
           <Link href="/cabinet" className="text-sm text-zinc-500 transition-colors hover:text-zinc-300">
             ← Назад в кабинет
@@ -282,7 +282,7 @@ export default function CabinetPage() {
       {notice && <div className="mt-4 rounded-xl border border-lime-300/30 bg-lime-300/10 px-4 py-3 text-sm text-lime-200">{notice}</div>}
       {error && <div className="mt-4 rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-300">{error}</div>}
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-2">
+      <div className="mt-6 grid gap-6 lg:grid-cols-2 lg:gap-8">
         {/* Профиль */}
         <div className="card p-6">
           <h2 className="text-lg font-bold text-white">Профиль</h2>
@@ -375,7 +375,7 @@ export default function CabinetPage() {
           <h3 className="mt-6 text-sm font-semibold text-white">Ваши контакты (видны в профиле)</h3>
           <div className="mt-3 space-y-3">
             {contacts.map((c, i) => (
-              <div key={i} className="flex gap-2">
+              <div key={i} className="flex flex-col gap-2 sm:flex-row">
                 <input
                   value={c.label}
                   onChange={(e) => setContacts(contacts.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
@@ -388,7 +388,11 @@ export default function CabinetPage() {
                   className={input}
                   placeholder="@username или ссылка"
                 />
-                <button onClick={() => setContacts(contacts.filter((_, j) => j !== i))} className="rounded-xl border border-white/10 px-3 text-red-400 hover:bg-white/5" aria-label="Удалить контакт">
+                <button
+                  onClick={() => setContacts(contacts.filter((_, j) => j !== i))}
+                  className="rounded-xl border border-white/10 px-3 py-2.5 text-red-400 transition-colors hover:bg-white/5 sm:py-0"
+                  aria-label="Удалить контакт"
+                >
                   ✕
                 </button>
               </div>
@@ -462,8 +466,7 @@ export default function CabinetPage() {
           </div>
 
           {!profile.isPro ? (
-            <div className="card mt-6 border-amber-300/20 p-6">
-              <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="card mt-6 border-amber-300/20 p-6">                <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <div>
                   <h3 className="font-bold text-white">⭐ Pro-подписка — 499 ₽/мес</h3>
                   <p className="mt-1 text-sm text-zinc-400">
@@ -477,12 +480,12 @@ export default function CabinetPage() {
                   Оформить Pro
                 </button>
               </div>
-              <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-white/10 pt-4">
+              <div className="mt-4 flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
                 <span className="text-sm text-zinc-400">Есть промокод?</span>
                 <input
                   value={promo}
                   onChange={(e) => setPromo(e.target.value.toUpperCase())}
-                  className="w-48 rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2 text-sm uppercase tracking-wider text-white outline-none transition-colors focus:border-indigo-400"
+                  className="w-full rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2 text-sm uppercase tracking-wider text-white outline-none transition-colors focus:border-indigo-400 sm:w-48"
                   placeholder="XXXX-XXXX"
                 />
                 <button onClick={redeemPromo} disabled={promoBusy} className="btn btn-ghost !py-2 text-sm disabled:opacity-50">
@@ -504,12 +507,12 @@ export default function CabinetPage() {
                   </p>
                 </div>
               </div>
-              <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-white/10 pt-4">
+              <div className="mt-4 flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
                 <span className="text-sm text-zinc-400">Продлить промокодом:</span>
                 <input
                   value={promo}
                   onChange={(e) => setPromo(e.target.value.toUpperCase())}
-                  className="w-48 rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2 text-sm uppercase tracking-wider text-white outline-none transition-colors focus:border-indigo-400"
+                  className="w-full rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2 text-sm uppercase tracking-wider text-white outline-none transition-colors focus:border-indigo-400 sm:w-48"
                   placeholder="XXXX-XXXX"
                 />
                 <button onClick={redeemPromo} disabled={promoBusy} className="btn btn-ghost !py-2 text-sm disabled:opacity-50">

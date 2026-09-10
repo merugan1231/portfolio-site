@@ -86,9 +86,9 @@ export default function CabinetPage() {
   const verifiedCount = works.filter((w) => w.verifyStatus === "verified").length;
 
   return (
-    <section className="mx-auto w-full max-w-5xl flex-1 px-6 py-12">
+    <section className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
       {/* Шапка: кто я */}
-      <div className="card flex flex-col items-start gap-5 p-8 sm:flex-row sm:items-center">
+      <div className="card flex flex-col items-start gap-5 p-6 sm:flex-row sm:items-center sm:p-8">
         {profile.avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={profile.avatarUrl} alt="" className="h-20 w-20 rounded-full object-cover" />
@@ -125,37 +125,37 @@ export default function CabinetPage() {
         </div>
       </div>
 
-      {/* Цифры */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-4">
-        <div className="card p-5">
-          <div className="text-3xl font-extrabold text-white">{works.length}<span className="text-base font-medium text-zinc-500">{profile.isPro ? "" : " / 5"}</span></div>
-          <div className="mt-1 text-xs uppercase tracking-wide text-zinc-500">Работ опубликовано</div>
+      {/* Цифры — на телефоне в 2 колонки, крупные числа уменьшены */}
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:mt-6 sm:grid-cols-4 sm:gap-4">
+        <div className="card p-4 sm:p-5">
+          <div className="text-2xl font-extrabold text-white sm:text-3xl">{works.length}<span className="text-base font-medium text-zinc-500">{profile.isPro ? "" : " / 5"}</span></div>
+          <div className="mt-1 text-[10px] uppercase leading-tight tracking-wide text-zinc-500 sm:text-xs">Работ опубликовано</div>
         </div>
-        <div className="card p-5">
-          <div className="text-3xl font-extrabold text-lime-300">{verifiedCount}</div>
-          <div className="mt-1 text-xs uppercase tracking-wide text-zinc-500">Авторство подтверждено</div>
+        <div className="card p-4 sm:p-5">
+          <div className="text-2xl font-extrabold text-lime-300 sm:text-3xl">{verifiedCount}</div>
+          <div className="mt-1 text-[10px] uppercase leading-tight tracking-wide text-zinc-500 sm:text-xs">Авторство подтверждено</div>
         </div>
-        <div className="card p-5">
-          <div className="text-3xl font-extrabold text-amber-300">{avgRating ?? "—"}</div>
-          <div className="mt-1 text-xs uppercase tracking-wide text-zinc-500">Средняя оценка</div>
+        <div className="card p-4 sm:p-5">
+          <div className="text-2xl font-extrabold text-amber-300 sm:text-3xl">{avgRating ?? "—"}</div>
+          <div className="mt-1 text-[10px] uppercase leading-tight tracking-wide text-zinc-500 sm:text-xs">Средняя оценка</div>
         </div>
-        <div className="card p-5">
-          <div className="text-3xl font-extrabold text-indigo-300">{daysOnService}</div>
-          <div className="mt-1 text-xs uppercase tracking-wide text-zinc-500">{daysOnService % 10 === 1 && daysOnService % 100 !== 11 ? "день с нами" : "дней с нами"}</div>
+        <div className="card p-4 sm:p-5">
+          <div className="text-2xl font-extrabold text-indigo-300 sm:text-3xl">{daysOnService}</div>
+          <div className="mt-1 text-[10px] uppercase leading-tight tracking-wide text-zinc-500 sm:text-xs">{daysOnService % 10 === 1 && daysOnService % 100 !== 11 ? "день с нами" : "дней с нами"}</div>
         </div>
       </div>
 
       {/* Вкладки-действия */}
-      <h2 className="mt-10 text-lg font-bold text-white">Управление</h2>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <Link href="/cabinet/edit" className="card group p-6 transition-transform hover:-translate-y-0.5">
+      <h2 className="mt-8 text-lg font-bold text-white sm:mt-10">Управление</h2>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 sm:gap-4">
+        <Link href="/cabinet/edit" className="card group p-5 transition-transform hover:-translate-y-0.5 sm:p-6">
           <div className="text-2xl">✏️</div>
           <div className="mt-2 font-bold text-white transition-colors group-hover:text-lime-300">Изменить профиль</div>
           <p className="mt-1 text-sm text-zinc-400">
             Аватар, имя, роли, биография по пунктам, контакты — и всё содержимое кабинета: работы, подписка Pro, промокоды.
           </p>
         </Link>
-        <Link href="/works/new" className="card group p-6 transition-transform hover:-translate-y-0.5">
+        <Link href="/works/new" className="card group p-5 transition-transform hover:-translate-y-0.5 sm:p-6">
           <div className="text-2xl">➕</div>
           <div className="mt-2 font-bold text-white transition-colors group-hover:text-lime-300">Добавить работу</div>
           <p className="mt-1 text-sm text-zinc-400">
@@ -164,7 +164,7 @@ export default function CabinetPage() {
         </Link>
         <Link
           href={profile.username ? `/u/${profile.username}` : "/cabinet/edit"}
-          className="card group p-6 transition-transform hover:-translate-y-0.5"
+          className="card group p-5 transition-transform hover:-translate-y-0.5 sm:p-6"
         >
           <div className="text-2xl">🌐</div>
           <div className="mt-2 font-bold text-white transition-colors group-hover:text-lime-300">Мой публичный профиль</div>
@@ -174,7 +174,7 @@ export default function CabinetPage() {
               : "Сначала задайте юзернейм — он закрепляется один раз."}
           </p>
         </Link>
-        <Link href="/search" className="card group p-6 transition-transform hover:-translate-y-0.5">
+        <Link href="/search" className="card group p-5 transition-transform hover:-translate-y-0.5 sm:p-6">
           <div className="text-2xl">🔎</div>
           <div className="mt-2 font-bold text-white transition-colors group-hover:text-lime-300">Найти людей</div>
           <p className="mt-1 text-sm text-zinc-400">
@@ -186,7 +186,7 @@ export default function CabinetPage() {
       {/* Последние работы */}
       {works.length > 0 && (
         <>
-          <h2 className="mt-10 text-lg font-bold text-white">Мои работы</h2>
+          <h2 className="mt-8 text-lg font-bold text-white sm:mt-10">Мои работы</h2>
           <div className="mt-4 space-y-3">
             {works.slice(0, 5).map((w) => (
               <Link key={w.id} href={`/works/${w.id}`} className="card flex items-center justify-between gap-3 p-4 transition-transform hover:-translate-y-0.5">

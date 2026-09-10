@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function HowReviewsPage() {
   return (
-    <section className="relative mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+    <section className="relative mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6 sm:py-16">
       <div className="glow left-[-80px] top-[-60px] h-72 w-72 bg-sky-500" />
       <Link href="/" className="relative text-sm text-zinc-500 transition-colors hover:text-zinc-300">
         ← На главную
