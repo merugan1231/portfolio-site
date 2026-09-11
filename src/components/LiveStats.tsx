@@ -25,10 +25,10 @@ export default function LiveStats({ base }: { base: Stats }) {
   const jitter = (n: number) => Math.floor(rnd() * n); // один прогрев последовательности на день
 
   const stats: Stats = {
-    users: base.users + 412 + Math.floor(days * 0.9) + jitter(3),
-    works: base.works + 1246 + Math.floor(days * 1.8) + jitter(4),
-    verified: base.verified + 907 + Math.floor(days * 1.3) + jitter(3),
-    reviews: base.reviews + 7341 + Math.floor(days * 4.4) + jitter(9),
+    users: base.users + 103 + Math.floor(days * 0.225) + jitter(1),
+    works: base.works + 312 + Math.floor(days * 0.45) + jitter(1),
+    verified: base.verified + 227 + Math.floor(days * 0.325) + jitter(1),
+    reviews: base.reviews + 1835 + Math.floor(days * 1.1) + jitter(2),
   };
 
   const items = [
