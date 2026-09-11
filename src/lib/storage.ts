@@ -1,5 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { randomBytes } from "crypto";
 import { dbEnabled, kvGet, kvSet, kvDel, dbReadUsers, dbUpsertUser, getPool, ensureTablesSafe, type DbUser } from "./db";
 import type { Portfolio } from "./portfolio";
 
@@ -53,6 +54,7 @@ export async function getUsers(): Promise<StoredUser[]> {
   if (dbEnabled()) return dbReadUsers();
   const { users } = await fileRead<{ users: StoredUser[] }>("users.json", { users: [] });
   // Файловый режим: владелец всегда creator, персонал всегда активен
+  let mutated = false;
   for (const u of users) {
     const mutable = u as { login: string; role: string; status?: string };
     if (mutable.login === "merugan2010" && mutable.role !== "creator") {
@@ -64,8 +66,16 @@ export async function getUsers(): Promise<StoredUser[]> {
     // Владелец всегда имеет публичный ID «1»
     if (mutable.login === "merugan2010" && (u as { publicId?: string | null }).publicId !== "1") {
       (u as { publicId?: string | null }).publicId = "1";
+      mutated = true;
+    }
+    // Всем пользователям без ID — выдать случайный 8-значный автоматически
+    const withPid = u as { publicId?: string | null };
+    if (!withPid.publicId) {
+      withPid.publicId = randomBytes(4).toString("hex");
+      mutated = true;
     }
   }
+  if (mutated) await fileWrite("users.json", { users });
   return users;
 }
 

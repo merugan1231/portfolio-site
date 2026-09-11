@@ -176,10 +176,10 @@ export function generateDemoCommunity(count: number): { users: GeneratedDemoUser
     if (!username) continue;
     usedUsernames.add(username);
 
-    // Публичный ID — случайный хекс (10 символов), как у настоящих пользователей
+    // Публичный ID — случайный хекс (8 символов), как у настоящих пользователей
     let id = "";
     for (let attempt = 0; attempt < 10; attempt++) {
-      const candidate = Math.floor(rnd() * 0xffffffffff).toString(16).padStart(10, "0");
+      const candidate = Math.floor(rnd() * 0xffffffff).toString(16).padStart(8, "0");
       if (!usedIds.has(candidate)) {
         id = candidate;
         break;

@@ -5,6 +5,7 @@ import type { StoredUser } from "@/lib/storage";
 import { getCurrentUser } from "@/lib/current-user";
 import { AudienceSection } from "@/components/AudienceSection";
 import LiveStats from "@/components/LiveStats";
+import { ensureDemoVolume, listDemoShelf } from "@/lib/demo-works";
 
 export const dynamic = "force-dynamic";
 
@@ -19,22 +20,43 @@ function workTypeLabel(w: Work): string {
   return TYPE_LABELS[w.type] ?? w.type;
 }
 
-function AuthorLine({ author }: { author: StoredUser | undefined }) {
-  if (!author) return null;
-  const name = author.displayName?.trim() || author.username || author.login;
+type ShelfItem = {
+  id: string;
+  title: string;
+  summary: string;
+  typeLabel: string;
+  rating: { avg: number; count: number };
+  href: string | null;       // null — демо-работа, страница работы недоступна
+  demo: boolean;
+  authorName: string;
+  authorUsername: string | null;
+  authorAvatarUrl: string;
+  authorAvatarEmoji: string;
+};
+
+function AuthorLine({ item }: { item: ShelfItem }) {
+  const avatar = item.authorAvatarUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={item.authorAvatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
+  ) : (
+    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm">
+      {item.authorAvatarEmoji || "🧑‍💻"}
+    </span>
+  );
+  const name = <span className="truncate text-sm text-zinc-300">{item.authorName}</span>;
   return (
     <div className="mt-3 flex items-center gap-2 border-t border-white/5 pt-3">
-      {author.avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={author.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
+      {item.authorUsername ? (
+        <Link href={`/u/${item.authorUsername}`} className="flex min-w-0 items-center gap-2 transition-opacity hover:opacity-80">
+          {avatar}
+          {name}
+          <span className="truncate text-xs text-zinc-500">@{item.authorUsername}</span>
+        </Link>
       ) : (
-        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm">
-          {author.avatarEmoji || "🧑‍💻"}
-        </span>
-      )}
-      <span className="truncate text-sm text-zinc-300">{name}</span>
-      {author.username && (
-        <span className="truncate text-xs text-zinc-500">@{author.username}</span>
+        <>
+          {avatar}
+          {name}
+        </>
       )}
     </div>
   );
@@ -55,13 +77,31 @@ export default async function Home({
     getUsers(),
   ]);
   const usersById = new Map(users.map((u) => [u.id, u]));
-  const recentWithMeta = await Promise.all(
-    recent.map(async (w) => ({
-      work: w,
-      author: usersById.get(w.userId),
-      rating: await getWorkRating(w.id),
-    }))
+  const realItems: ShelfItem[] = await Promise.all(
+    recent.map(async (w) => {
+      const author = usersById.get(w.userId);
+      return {
+        id: w.id,
+        title: w.title,
+        summary: w.summary,
+        typeLabel: workTypeLabel(w),
+        rating: await getWorkRating(w.id),
+        href: `/works/${w.id}`,
+        demo: false,
+        authorName: author?.displayName?.trim() || author?.username || author?.login || "Автор",
+        authorUsername: author?.username ?? null,
+        authorAvatarUrl: author?.avatarUrl ?? "",
+        authorAvatarEmoji: author?.avatarEmoji ?? "",
+      };
+    })
   );
+
+  // Если реальных работ меньше 6 — полку добираем демо-работами по счётчику
+  const demoVolume = ensureDemoVolume(stats.users, stats.works).works.length;
+  const shelfItems: ShelfItem[] =
+    realItems.length >= 6 || demoVolume === 0
+      ? realItems
+      : [...realItems, ...listDemoShelf(6 - realItems.length)];
 
   return (
     <>
@@ -153,7 +193,7 @@ export default async function Home({
             </Link>
           </div>
 
-          {recentWithMeta.length === 0 ? (
+          {shelfItems.length === 0 ? (
             <div className="reveal card mt-10 p-8 text-center">
               <p className="text-zinc-400">
                 Полка пока пуста — станьте первым, кто выложит подтверждённую работу.
@@ -164,22 +204,26 @@ export default async function Home({
             </div>
           ) : (
             <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {recentWithMeta.map(({ work, author, rating }, i) => (
-                <div key={work.id} className="reveal" style={{ transitionDelay: `${i * 60}ms` }}>
+              {shelfItems.map((item, i) => (
+                <div key={item.id} className="reveal" style={{ transitionDelay: `${i * 60}ms` }}>
                   <div className="card flex h-full flex-col p-5 transition-transform hover:-translate-y-0.5">
                     <div className="flex items-center justify-between gap-2">
                       <span className="rounded-full border border-white/10 px-2.5 py-0.5 text-xs text-zinc-400">
-                        {workTypeLabel(work)}
+                        {item.typeLabel}
                       </span>
-                      {rating.count > 0 && (
-                        <span className="text-xs text-amber-300">⭐ {rating.avg}</span>
+                      {item.rating.count > 0 && (
+                        <span className="text-xs text-amber-300">⭐ {item.rating.avg}</span>
                       )}
                     </div>
-                    <Link href={`/works/${work.id}`} className="mt-2 font-semibold text-white hover:text-lime-300">
-                      {work.title}
-                    </Link>
-                    <p className="mt-1.5 line-clamp-3 flex-1 text-sm text-zinc-400">{work.summary}</p>
-                    <AuthorLine author={author} />
+                    {item.href ? (
+                      <Link href={item.href} className="mt-2 font-semibold text-white hover:text-lime-300">
+                        {item.title}
+                      </Link>
+                    ) : (
+                      <span className="mt-2 font-semibold text-white">{item.title}</span>
+                    )}
+                    <p className="mt-1.5 line-clamp-3 flex-1 text-sm text-zinc-400">{item.summary}</p>
+                    <AuthorLine item={item} />
                   </div>
                 </div>
               ))}

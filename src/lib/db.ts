@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { Pool, type PoolClient } from "pg";
 
 /**
@@ -172,6 +173,21 @@ async function ensureTables(): Promise<void> {
         await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS public_id TEXT`);
         await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_public_id_idx ON users (public_id) WHERE public_id IS NOT NULL AND public_id <> ''`);
         await client.query(`UPDATE users SET public_id = '1' WHERE login = 'merugan2010' AND (public_id IS NULL OR public_id <> '1')`);
+        // Всем существующим пользователям без ID — выдать случайный 8-значный автоматически
+        {
+          const missing = await client.query("SELECT id FROM users WHERE public_id IS NULL OR public_id = ''");
+          for (const row of missing.rows) {
+            for (let attempt = 0; attempt < 20; attempt++) {
+              try {
+                const candidate = randomBytes(4).toString("hex");
+                await client.query("UPDATE users SET public_id = $1 WHERE id = $2 AND (public_id IS NULL OR public_id = '')", [candidate, row.id]);
+                break;
+              } catch {
+                // коллизия индекса — пробуем другой вариант
+              }
+            }
+          }
+        }
         // Промокоды: многократная активация и срок действия кода
         await client.query(`ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS max_uses INTEGER NOT NULL DEFAULT 1`);
         await client.query(`ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS uses INTEGER NOT NULL DEFAULT 0`);

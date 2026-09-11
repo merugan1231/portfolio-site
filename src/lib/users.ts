@@ -134,9 +134,9 @@ export function newId(prefix: string): string {
   return `${prefix}_${randomBytes(6).toString("hex")}`;
 }
 
-/** Публичный случайный ID пользователя (10 символов, hex). ID «1» — только у создателя. */
+/** Публичный случайный ID пользователя (8 символов, hex). ID «1» — только у создателя. */
 export function newPublicId(): string {
-  return randomBytes(5).toString("hex");
+  return randomBytes(4).toString("hex");
 }
 
 export function generateCode(): string {

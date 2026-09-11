@@ -1,4 +1,7 @@
 import { creatorDemoProfile, generateDemoCommunity, showcaseStats, type DemoProfile, type DemoWork } from "@/lib/showcase";
+import { WORK_TYPES } from "@/lib/works";
+
+const WORK_TYPE_LABELS: Record<string, string> = Object.fromEntries(WORK_TYPES.map((t) => [t.id, t.label]));
 
 /**
  * Демо-наполнение для витрин: настоящие работы и профили пользователей
@@ -53,6 +56,35 @@ export function ensureDemoVolume(baseUsers: number, baseWorks: number): { users:
 /** Все демо-работы текущего выпуска. */
 export function listDemoWorks(): DemoWork[] {
   return cachedWorks;
+}
+
+/**
+ * Полка на главной: до n демо-работ текущего выпуска.
+ * Берём самые свежие; авторы кликабельны (ведут в демо-профиль).
+ */
+export function listDemoShelf(n: number): {
+  id: string; title: string; summary: string; typeLabel: string;
+  rating: { avg: number; count: number }; href: string | null; demo: boolean;
+  authorName: string; authorUsername: string | null;
+  authorAvatarUrl: string; authorAvatarEmoji: string;
+}[] {
+  if (n <= 0 || cachedWorks.length === 0) return [];
+  return cachedWorks.slice(0, n).map((w) => {
+    const author = cachedUsers.find((u) => u.username === w.authorUsername);
+    return {
+      id: w.id,
+      title: w.title,
+      summary: w.summary,
+      typeLabel: w.typeCustom || WORK_TYPE_LABELS[w.type] || w.type,
+      rating: w.rating,
+      href: null,
+      demo: true,
+      authorName: author?.displayName || w.authorUsername,
+      authorUsername: author?.username ?? w.authorUsername,
+      authorAvatarUrl: author?.avatarUrl ?? "",
+      authorAvatarEmoji: author?.avatarEmoji ?? "",
+    };
+  });
 }
 
 /** Демо-профиль по юзернейму (для /u/<username>). Создатель — только реальный аккаунт. */
