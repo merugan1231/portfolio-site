@@ -224,7 +224,8 @@ async function removeCode(target: string): Promise<void> {
 
 import {
   dbCreateTicket, dbListTicketsByUser, dbListAllTickets, dbUpdateTicket,
-  type DbTicket,
+  dbListTicketMessages, dbAddTicketMessage,
+  type DbTicket, type DbTicketMessage,
 } from "./db";
 import {
   dbCreateUsernameRequest, dbListUsernameRequests, dbListUsernameRequestsByUser, dbUpdateUsernameRequest,
@@ -273,6 +274,45 @@ export function resolveTicket(id: string, status: "resolved" | "dismissed", admi
     t.updatedAt = new Date().toISOString();
   }
   return Promise.resolve(t);
+}
+
+// ---------- Переписка в тикетах (обёртки; в файловом режиме — в памяти) ----------
+
+export type TicketMessage = DbTicketMessage;
+const memTicketMessages: TicketMessage[] = [];
+
+export function listTicketMessages(ticketId: string): Promise<TicketMessage[]> {
+  return dbEnabled()
+    ? dbListTicketMessages(ticketId)
+    : Promise.resolve(
+        memTicketMessages
+          .filter((m) => m.ticketId === ticketId)
+          .sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : a.id - b.id))
+      );
+}
+
+export function addTicketMessage(ticketId: string, authorRole: "user" | "admin", author: string, body: string): Promise<TicketMessage> {
+  if (dbEnabled()) return dbAddTicketMessage(ticketId, authorRole, author, body);
+  const msg: TicketMessage = {
+    id: Date.now(),
+    ticketId,
+    authorRole,
+    author,
+    body,
+    createdAt: new Date().toISOString(),
+  };
+  memTicketMessages.push(msg);
+  if (authorRole === "user") {
+    const t = memTickets.find((x) => x.id === ticketId);
+    if (t) {
+      t.status = "open";
+      t.updatedAt = msg.createdAt;
+    }
+  } else {
+    const t = memTickets.find((x) => x.id === ticketId);
+    if (t) t.updatedAt = msg.createdAt;
+  }
+  return Promise.resolve(msg);
 }
 
 // re-export для совместимости

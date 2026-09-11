@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import TicketChat from "@/components/TicketChat";
 
 type Ticket = {
   id: string;
@@ -214,6 +215,14 @@ export default function TicketsPage() {
                 <span className="font-semibold">Ответ администрации{t.handledBy ? ` (${t.handledBy})` : ""}:</span> {t.adminReply}
               </div>
             )}
+            <TicketChat
+              ticketId={t.id}
+              meRole="user"
+              peerLabel="Администрация"
+              initialUserMessage={{ body: t.message, createdAt: t.createdAt }}
+              legacyAdminReply={t.adminReply ? { body: t.adminReply, author: t.handledBy } : null}
+              onSent={load}
+            />
             <div className="mt-2 text-xs text-zinc-600">{new Date(t.createdAt).toLocaleString("ru-RU")}</div>
           </div>
         ))}

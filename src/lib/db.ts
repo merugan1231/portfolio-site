@@ -103,6 +103,15 @@ async function ensureTables(): Promise<void> {
             updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
           );
           CREATE INDEX IF NOT EXISTS tickets_user_idx ON tickets (user_id);
+          CREATE TABLE IF NOT EXISTS ticket_messages (
+            id SERIAL PRIMARY KEY,
+            ticket_id TEXT NOT NULL,
+            author_role TEXT NOT NULL DEFAULT 'user',
+            author TEXT NOT NULL DEFAULT '',
+            body TEXT NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+          );
+          CREATE INDEX IF NOT EXISTS ticket_messages_ticket_idx ON ticket_messages (ticket_id);
           CREATE TABLE IF NOT EXISTS username_requests (
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL,
@@ -473,6 +482,52 @@ export async function dbUpdateTicket(id: string, status: DbTicket["status"], adm
     [id, status, adminReply, handledBy]
   );
   return res.rows[0] ? rowToTicket(res.rows[0]) : null;
+}
+
+/** Сообщения переписки в тикете (пользователь ↔ админ). */
+export type DbTicketMessage = {
+  id: number;
+  ticketId: string;
+  authorRole: "user" | "admin";
+  author: string;
+  body: string;
+  createdAt: string;
+};
+
+function rowToTicketMessage(r: Record<string, unknown>): DbTicketMessage {
+  return {
+    id: Number(r.id),
+    ticketId: r.ticket_id as string,
+    authorRole: (r.author_role as DbTicketMessage["authorRole"]) === "admin" ? "admin" : "user",
+    author: (r.author as string) ?? "",
+    body: r.body as string,
+    createdAt: (r.created_at as Date).toISOString(),
+  };
+}
+
+export async function dbListTicketMessages(ticketId: string): Promise<DbTicketMessage[]> {
+  await ensureTables();
+  const res = await getPool().query(
+    "SELECT * FROM ticket_messages WHERE ticket_id = $1 ORDER BY created_at ASC, id ASC LIMIT 500",
+    [ticketId]
+  );
+  return res.rows.map(rowToTicketMessage);
+}
+
+export async function dbAddTicketMessage(ticketId: string, authorRole: "user" | "admin", author: string, body: string): Promise<DbTicketMessage> {
+  await ensureTables();
+  const res = await getPool().query(
+    `INSERT INTO ticket_messages (ticket_id, author_role, author, body)
+     VALUES ($1,$2,$3,$4) RETURNING *`,
+    [ticketId, authorRole, author, body]
+  );
+  // Поднять тикет в списке: обновляем updated_at, а пользовательский ответ вновь открывает тикет
+  if (authorRole === "user") {
+    await getPool().query("UPDATE tickets SET status = 'open', updated_at = now() WHERE id = $1", [ticketId]);
+  } else {
+    await getPool().query("UPDATE tickets SET updated_at = now() WHERE id = $1", [ticketId]);
+  }
+  return rowToTicketMessage(res.rows[0]);
 }
 
 // ---------- Запросы на смену юзернейма ----------

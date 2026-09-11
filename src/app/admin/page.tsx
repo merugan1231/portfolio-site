@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Portfolio, Project } from "@/lib/portfolio";
+import TicketChat from "@/components/TicketChat";
 import PaymentsTab from "./PaymentsTab";
 
 type Me = { login: string; role: string; email: string } | null;
@@ -362,7 +363,7 @@ export default function AdminPage() {
       </div>
 
       {/* Вкладки — на телефоне прокручиваются вбок, не ломая сетку */}
-      <div className="-mx-4 mb-6 overflow-x-auto px-4 pb-1 sm:mx-0 sm:mb-8 sm:overflow-visible sm:px-0">
+      <div className="-mx-4 mb-6 overflow-x-auto px-4 pb-1 sm:mx-0 sm:mb-8 sm:overflow-hidden sm:px-0">
         <div className="flex gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5">
           {(
             [
@@ -380,7 +381,7 @@ export default function AdminPage() {
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`shrink-0 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-300 sm:flex-1 sm:px-4 ${
+              className={`shrink-0 whitespace-nowrap rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-300 min-[1100px]:flex-1 min-[1100px]:px-3.5 min-[1100px]:text-sm sm:flex-1 sm:px-3.5 sm:text-sm ${
                 tab === key
                   ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
                   : "text-zinc-400 hover:bg-white/5 hover:text-white"
@@ -776,7 +777,6 @@ export default function AdminPage() {
 }
 
 function TicketsTab({ tickets, onAction }: { tickets: Ticket[]; onAction: () => void }) {
-  const [reply, setReply] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
 
   async function handle(id: string, status: "resolved" | "dismissed") {
@@ -784,10 +784,9 @@ function TicketsTab({ tickets, onAction }: { tickets: Ticket[]; onAction: () => 
     await fetch(`/api/tickets/${id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status, reply: reply || undefined }),
+      body: JSON.stringify({ status }),
     });
     setBusy(null);
-    setReply("");
     onAction();
   }
 
@@ -795,7 +794,7 @@ function TicketsTab({ tickets, onAction }: { tickets: Ticket[]; onAction: () => 
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-white">Тикеты пользователей</h2>
       <p className="text-sm text-zinc-500">
-        Оспаривания модерации и обращения. Ответ увидит автор тикета на странице «Тикеты».
+        Оспаривания модерации и обращения. Переписка видна автору тикета на странице «Тикеты».
       </p>
       {tickets.length === 0 && <p className="text-sm text-zinc-500">Тикетов пока нет 🎉</p>}
       {tickets.map((t) => (
@@ -816,27 +815,22 @@ function TicketsTab({ tickets, onAction }: { tickets: Ticket[]; onAction: () => 
             </div>
           </div>
           <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-300">{t.message}</p>
-          {t.adminReply && (
-            <p className="mt-2 rounded-lg border border-indigo-400/20 bg-indigo-500/10 p-3 text-sm text-indigo-200">
-              Ответ ({t.handledBy}): {t.adminReply}
-            </p>
-          )}
+          <TicketChat
+            ticketId={t.id}
+            meRole="admin"
+            peerLabel={t.userLogin}
+            initialUserMessage={{ body: t.message, createdAt: t.createdAt }}
+            legacyAdminReply={t.adminReply ? { body: t.adminReply, author: t.handledBy } : null}
+            onSent={onAction}
+          />
           {t.status === "open" && (
-            <div className="mt-3">
-              <input
-                value={reply}
-                onChange={(e) => setReply(e.target.value)}
-                placeholder="Ответ пользователю (необязательно)"
-                className="w-full rounded-xl border border-white/10 bg-zinc-900/70 px-4 py-2.5 text-sm text-white outline-none transition-colors focus:border-indigo-400"
-              />
-              <div className="mt-2 flex gap-3">
-                <button disabled={busy === t.id} onClick={() => handle(t.id, "resolved")} className="btn btn-primary !py-2 text-xs">
-                  ✅ Решён
-                </button>
-                <button disabled={busy === t.id} onClick={() => handle(t.id, "dismissed")} className="btn btn-ghost !py-2 text-xs !text-red-400">
-                  ❌ Отклонить
-                </button>
-              </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button disabled={busy === t.id} onClick={() => handle(t.id, "resolved")} className="btn btn-primary !rounded-xl !px-4 !py-2 text-xs">
+                ✅ Решён
+              </button>
+              <button disabled={busy === t.id} onClick={() => handle(t.id, "dismissed")} className="btn btn-ghost !rounded-xl !px-4 !py-2 !text-red-400 text-xs">
+                ❌ Отклонить
+              </button>
             </div>
           )}
         </div>
