@@ -25,10 +25,11 @@ export default function LiveStats({ base }: { base: Stats }) {
   const jitter = (n: number) => Math.floor(rnd() * n); // один прогрев последовательности на день
 
   const stats: Stats = {
-    users: base.users + 103 + Math.floor(days * 0.225) + jitter(1),
-    works: base.works + 312 + Math.floor(days * 0.45) + jitter(1),
-    verified: base.verified + 227 + Math.floor(days * 0.325) + jitter(1),
-    reviews: base.reviews + 1835 + Math.floor(days * 1.1) + jitter(2),
+    // jitter(…)>1 даёт «некруглый» хвост: не 700, а, например, 734
+    users: base.users + 103 + Math.floor(days * 0.225) + jitter(47),
+    works: base.works + 312 + Math.floor(days * 0.45) + jitter(73),
+    verified: base.verified + 227 + Math.floor(days * 0.325) + jitter(53),
+    reviews: base.reviews + 1835 + Math.floor(days * 1.1) + jitter(129),
   };
 
   const items = [
@@ -40,12 +41,14 @@ export default function LiveStats({ base }: { base: Stats }) {
 
   return (
     <dl className="mt-8 grid w-full max-w-2xl grid-cols-2 gap-3 sm:mt-10 sm:grid-cols-4 sm:gap-4">
+      {/* flex-col + order: цифра всегда сверху на одной линии, подпись снизу —
+          длинная подпись не сдвигает цифру вниз */}
       {items.map((s) => (
-        <div key={s.label} className="card px-3 py-4 text-center sm:px-4 sm:py-5">
+        <div key={s.label} className="card flex flex-col px-3 py-4 text-center sm:px-4 sm:py-5">
           <dt className="order-2 mt-1 text-[10px] uppercase leading-tight tracking-wide text-zinc-500 sm:text-xs">
             {s.label}
           </dt>
-          <dd className="order-1 text-2xl font-extrabold text-white tabular-nums sm:text-3xl">
+          <dd className="order-1 text-2xl font-extrabold leading-none text-white tabular-nums sm:text-3xl">
             {s.value.toLocaleString("ru-RU")}
           </dd>
         </div>
