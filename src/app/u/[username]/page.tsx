@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 type Profile = {
+  id: string | null;
   username: string | null;
   displayName: string;
   avatarEmoji: string;
@@ -15,6 +16,7 @@ type Profile = {
   contacts: { label: string; value: string }[];
   plan: "free" | "pro";
   memberSince: string;
+  creator: boolean;
 };
 
 const BIO_LABELS: Record<string, string> = {
@@ -73,7 +75,7 @@ export default function PublicProfilePage() {
           return;
         }
         setProfile(d.profile);
-        setWorks(d.works ?? []);
+        setWorks((d.works ?? []).map((w: Work & { demo?: boolean }) => ({ ...w, demo: w.demo ?? false })));
       })
       .catch(() => setError("Пользователь не найден"));
   }, [username]);
@@ -103,10 +105,22 @@ export default function PublicProfilePage() {
           <span className="inline-flex h-20 w-20 items-center justify-center rounded-full border border-white/10 bg-white/5 text-4xl">
             {profile.avatarEmoji || "🧑‍💻"}
           </span>
-        )}
-        <div>
-          <h1 className="text-2xl font-extrabold text-white">{profile.displayName || profile.username}</h1>
-          <p className="text-sm text-zinc-400">@{profile.username}</p>
+        )}          <div>
+          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-extrabold text-white">
+            {profile.displayName || profile.username}
+            {profile.creator && (
+              <span
+                title="Аккаунт владельца сервиса"
+                className="inline-flex items-center gap-1 rounded-full border border-violet-300/30 bg-violet-400/15 px-2.5 py-0.5 text-xs font-semibold text-violet-200"
+              >
+                👑 Создатель
+              </span>
+            )}
+          </h1>
+          <p className="text-sm text-zinc-400">
+            @{profile.username}
+            {profile.id && <span className="ml-2 text-xs text-zinc-600">ID: {profile.id}</span>}
+          </p>
           {(profile.roles ?? []).length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {(profile.roles ?? []).map((id) => {
@@ -162,18 +176,35 @@ export default function PublicProfilePage() {
       </h2>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 sm:gap-4">
         {works.length === 0 && <p className="text-sm text-zinc-500">Пока нет подтверждённых работ.</p>}
-        {works.map((w) => (
-          <Link key={w.id} href={`/works/${w.id}`} className="card block p-5 transition-transform hover:-translate-y-0.5">
-            <div className="text-xs uppercase tracking-wide text-zinc-500">
-              {w.type === "custom" && w.typeCustom ? w.typeCustom : (TYPE_LABELS[w.type] ?? w.type)}
+        {works.map((w) => {
+          const isDemo = (w as Work & { demo?: boolean }).demo === true;
+          const card = (
+            <>
+              <div className="text-xs uppercase tracking-wide text-zinc-500">
+                {w.type === "custom" && w.typeCustom ? w.typeCustom : (TYPE_LABELS[w.type] ?? w.type)}
+              </div>
+              <div className="mt-1 font-semibold text-white">{w.title}</div>
+              <p className="mt-1.5 line-clamp-2 text-sm text-zinc-400">{w.summary}</p>
+              <div className="mt-2 flex items-center justify-between text-xs text-amber-300">
+                <span>⭐ {w.rating.count ? `${w.rating.avg} (${w.rating.count})` : "нет оценок"}</span>
+                {isDemo && (
+                  <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-medium text-amber-200">
+                    Демо
+                  </span>
+                )}
+              </div>
+            </>
+          );
+          return isDemo ? (
+            <div key={w.id} className="card block p-5 opacity-90">
+              {card}
             </div>
-            <div className="mt-1 font-semibold text-white">{w.title}</div>
-            <p className="mt-1.5 line-clamp-2 text-sm text-zinc-400">{w.summary}</p>
-            <div className="mt-2 text-xs text-amber-300">
-              ⭐ {w.rating.count ? `${w.rating.avg} (${w.rating.count})` : "нет оценок"}
-            </div>
-          </Link>
-        ))}
+          ) : (
+            <Link key={w.id} href={`/works/${w.id}`} className="card block p-5 transition-transform hover:-translate-y-0.5">
+              {card}
+            </Link>
+          );
+        })}
       </div>
     </section>
   );

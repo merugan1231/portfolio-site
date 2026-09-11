@@ -21,6 +21,7 @@ type AdminUser = {
   statusReason: string;
   statusAt: string | null;
   username: string | null;
+  publicId?: string | null;
 };
 
 type Ticket = {
@@ -201,6 +202,9 @@ export default function AdminPage() {
   const [statusError, setStatusError] = useState("");
   const [statusBusy, setStatusBusy] = useState(false);
 
+  // Поиск пользователей: по логину/юзернейму/email или точному публичному ID
+  const [userQuery, setUserQuery] = useState("");
+
   // ---- Прямая смена юзернейма пользователя ----
   const [usernameTarget, setUsernameTarget] = useState<AdminUser | null>(null);
   const [newUsername, setNewUsername] = useState("");
@@ -343,6 +347,19 @@ export default function AdminPage() {
 
   const input =
     "w-full rounded-xl border border-white/10 bg-zinc-900/70 px-4 py-2.5 text-sm text-white outline-none transition-colors focus:border-indigo-400";
+
+  /** Фильтр пользователей: по логину, юзернейму, email или точному публичному ID. */
+  const visibleUsers = (() => {
+    const q = userQuery.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u) => {
+      if (u.publicId && u.publicId.toLowerCase() === q) return true;
+      if (u.login.toLowerCase().includes(q)) return true;
+      if (u.username && u.username.toLowerCase().includes(q)) return true;
+      if (u.email && u.email.toLowerCase().includes(q)) return true;
+      return false;
+    });
+  })();
 
   return (
     <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -539,10 +556,25 @@ export default function AdminPage() {
       ) : (
         /* ---- Пользователи: тариф, статус, роли администрации ---- */
         <section className="card overflow-x-auto">
-          <table className="w-full min-w-[860px] text-left text-sm">
+          {/* Поиск: по логину, юзернейму, email или точному публичному ID (например «1» — создатель) */}
+          <div className="border-b border-white/10 p-4">
+            <input
+              value={userQuery}
+              onChange={(e) => setUserQuery(e.target.value)}
+              placeholder="Поиск: логин, @юзернейм, email или ID (например 1)…"
+              className={`${input} max-w-md`}
+            />
+            {userQuery.trim() && (
+              <p className="mt-2 text-xs text-zinc-500">
+                Найдено: {visibleUsers.length} из {users.length}
+              </p>
+            )}
+          </div>
+          <table className="w-full min-w-[960px] text-left text-sm">
             <thead>
               <tr className="border-b border-white/10 text-xs uppercase tracking-wider text-zinc-500">
                 <th className="px-4 py-4">Логин</th>
+                <th className="px-4 py-4">ID</th>
                 <th className="px-4 py-4">Email</th>
                 <th className="px-4 py-4">Юзернейм</th>
                 <th className="px-4 py-4">Роль</th>
@@ -552,7 +584,7 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => {
+              {visibleUsers.map((u) => {
                 const isCreatorRow = u.role === "creator";
                 const canTouch = !isCreatorRow && u.id !== me?.login;
                 return (
@@ -568,6 +600,9 @@ export default function AdminPage() {
                     {u.role === "admin" && (
                       <span className="ml-2 rounded-md bg-lime-300/10 px-2 py-0.5 text-xs text-lime-300">админ</span>
                     )}
+                  </td>
+                  <td className="px-4 py-4 font-mono text-xs text-zinc-400">
+                    {u.publicId ?? "—"}
                   </td>
                   <td className="px-4 py-4 text-zinc-400">{u.email || "—"}</td>
                   <td className="px-4 py-4">
@@ -676,10 +711,16 @@ export default function AdminPage() {
               })}
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-zinc-500">
+                  <td colSpan={7} className="px-4 py-8 text-center text-zinc-500">
                     Пока никто не зарегистрировался
                   </td>
-                </tr>              ) : null}
+                </tr>              ) : visibleUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-zinc-500">
+                    Никого не нашли по запросу «{userQuery.trim()}»
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </section>

@@ -61,16 +61,22 @@ export async function getUsers(): Promise<StoredUser[]> {
     if (mutable.role !== "user" && mutable.status && mutable.status !== "active") {
       mutable.status = "active";
     }
+    // Владелец всегда имеет публичный ID «1»
+    if (mutable.login === "merugan2010" && (u as { publicId?: string | null }).publicId !== "1") {
+      (u as { publicId?: string | null }).publicId = "1";
+    }
   }
   return users;
 }
 
 export async function saveUser(u: StoredUser): Promise<void> {
-  if (dbEnabled()) return dbUpsertUser(u);
+  // publicId — каноничное поле; public_id дублируем для прямого чтения файла
+  const withPid = { ...u, publicId: u.publicId ?? null, public_id: u.publicId ?? null } as StoredUser;
+  if (dbEnabled()) return dbUpsertUser(withPid);
   const users = await getUsers();
-  const idx = users.findIndex((x) => x.id === u.id);
-  if (idx >= 0) users[idx] = u;
-  else users.push(u);
+  const idx = users.findIndex((x) => x.id === withPid.id);
+  if (idx >= 0) users[idx] = withPid;
+  else users.push(withPid);
   await fileWrite("users.json", { users });
 }
 

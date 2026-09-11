@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { providerConfig, siteUrl } from "@/lib/oauth";
 import { getUsers, saveUser } from "@/lib/storage";
-import { hashPassword, newId } from "@/lib/users";
+import { hashPassword, newId, newPublicId } from "@/lib/users";
 import { createSession } from "@/lib/sessions";
 import { SESSION_COOKIE } from "@/lib/current-user";
 import { cookies } from "next/headers";
@@ -64,6 +64,7 @@ export async function GET(
     }
     user = {
       id: newId("u"),
+      publicId: newPublicId(),
       login,
       email,
       phone: "",

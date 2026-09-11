@@ -1,36 +1,14 @@
+import { showcaseStats, type ShowcaseStats } from "@/lib/showcase";
+
 /**
  * Цифры сервиса на главной — «живые», но меняются ОДИН РАЗ В СУТКИ.
- * Базис = реальные цифры из БД, поверх — витринная надбавка, которая
- * монотонно растёт со временем (детерминированно от текущей даты):
- * все сутки показываются одни и те же цифры, на следующий день — чуть больше.
+ * Формула живёт в src/lib/showcase.ts — демо-сообщество генерируется
+ * ровно по этим же числам: сколько участников/работ показал счётчик,
+ * столько демо-профилей и работ существует на витрине.
  */
 
-type Stats = { users: number; works: number; verified: number; reviews: number };
-
-/** Детерминированный ГПСЧ от числа-семени (одинаковые цифры весь день). */
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-export default function LiveStats({ base }: { base: Stats }) {
-  const days = Math.floor(Date.now() / 86_400_000);
-  const rnd = mulberry32(days);
-  const jitter = (n: number) => Math.floor(rnd() * n); // один прогрев последовательности на день
-
-  const stats: Stats = {
-    // jitter(…)>1 даёт «некруглый» хвост: не 700, а, например, 734
-    users: base.users + 103 + Math.floor(days * 0.225) + jitter(47),
-    works: base.works + 312 + Math.floor(days * 0.45) + jitter(73),
-    verified: base.verified + 227 + Math.floor(days * 0.325) + jitter(53),
-    reviews: base.reviews + 1835 + Math.floor(days * 1.1) + jitter(129),
-  };
+export default function LiveStats({ base }: { base: ShowcaseStats }) {
+  const stats = showcaseStats(base);
 
   const items = [
     { label: "Участников", value: stats.users },

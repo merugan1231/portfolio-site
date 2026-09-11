@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { takeCode, saveUser, findUserByLogin } from "@/lib/storage";
-import { newId } from "@/lib/users";
+import { newId, newPublicId } from "@/lib/users";
 import { createSession } from "@/lib/sessions";
 import { SESSION_COOKIE } from "@/lib/current-user";
 
@@ -35,6 +35,7 @@ export async function POST(request: Request) {
 
   const user = {
     id: newId("u"),
+    publicId: newPublicId(),
     login,
     email,
     phone: "",

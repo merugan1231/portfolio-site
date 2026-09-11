@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAllVerifiedWorks, getWorkAuthors, getWorkRating, WORK_TYPES } from "@/lib/works";
-import { DEMO_WORKS, type DemoWork } from "@/lib/demo-works";
+import { getAllVerifiedWorks, getWorkAuthors, getWorkRating, getServiceStats, WORK_TYPES } from "@/lib/works";
+import { ensureDemoVolume, listDemoWorks, type DemoWork } from "@/lib/demo-works";
 
 export const metadata: Metadata = { title: "Все работы пользователей" };
 export const dynamic = "force-dynamic";
@@ -33,7 +33,7 @@ type Card = {
 function demoMatches(w: DemoWork, q: string, type: string): boolean {
   if (type && w.type !== type) return false;
   if (!q) return true;
-  const hay = `${w.title} ${w.summary} ${w.stack.join(" ")} ${w.author}`.toLowerCase();
+  const hay = `${w.title} ${w.summary} ${w.stack.join(" ")} ${w.authorUsername}`.toLowerCase();
   return q
     .toLowerCase()
     .split(/\s+/)
@@ -52,6 +52,12 @@ export default async function ExplorePage({
     works.map(async (w) => ({ ...w, rating: await getWorkRating(w.id) }))
   );
 
+  // Демо-сообщество инициализируется числами счётчиков главной:
+  // сколько работ показывает счётчик — столько демо-работ существует
+  const stats = await getServiceStats();
+  const demoAll = ensureDemoVolume(stats.users, stats.works).works;
+  const demoWorks = demoAll.filter((w) => demoMatches(w, q, type));
+
   const realCards: Card[] = withRatings.map((w) => {
     const author = authors[w.userId];
     return {
@@ -69,7 +75,7 @@ export default async function ExplorePage({
     };
   });
 
-  const demoCards: Card[] = DEMO_WORKS.filter((w) => demoMatches(w, q, type)).map((w) => ({
+  const demoCards: Card[] = demoWorks.map((w) => ({
     key: w.id,
     id: w.id,
     demo: true,
@@ -77,8 +83,8 @@ export default async function ExplorePage({
     summary: w.summary,
     typeLabel: w.type === "custom" && w.typeCustom ? w.typeCustom : (TYPE_LABELS[w.type] ?? w.type),
     stack: w.stack,
-    authorName: w.author,
-    authorUsername: null,
+    authorName: w.authorUsername,
+    authorUsername: w.authorUsername,
     date: new Date(w.createdAt),
     rating: w.rating,
   }));
@@ -144,7 +150,9 @@ export default async function ExplorePage({
               <p className="mt-1.5 line-clamp-2 flex-1 text-sm text-zinc-400">{c.summary}</p>
               <div className="mt-3 flex items-center justify-between gap-2 text-xs">
                 {c.demo ? (
-                  <span className="text-zinc-500">{c.authorName}</span>
+                  <Link href={`/u/${c.authorUsername}`} className="text-zinc-400 transition-colors hover:text-lime-300">
+                    {c.authorName} · @{c.authorUsername}
+                  </Link>
                 ) : c.authorUsername ? (
                   <span className="text-zinc-400 transition-colors group-hover:text-lime-300">
                     {c.authorName} · @{c.authorUsername}

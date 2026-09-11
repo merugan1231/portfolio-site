@@ -1,307 +1,88 @@
-import type { WorkType } from "@/lib/works";
+import { creatorDemoProfile, generateDemoCommunity, showcaseStats, type DemoProfile, type DemoWork } from "@/lib/showcase";
 
 /**
- * Демо-наполнение для витрины «Все работы» (/explore).
- * Витринные примеры вне БД: настоящие работы пользователей
+ * Демо-наполнение для витрин: настоящие работы и профили пользователей
  * показываются рядом и всегда в приоритете.
+ *
+ * Демо-сообщество генерируется детерминированно по витринным счётчикам
+ * главной (см. src/lib/showcase.ts): сколько «Участников» показывает
+ * счётчик — столько всего профилей; сколько «Работ» — столько работ.
+ * Реальные пользователи вычтены из цели, чтобы сумма совпадала точно.
  */
 
-export type DemoWork = {
-  id: string;
-  title: string;
-  summary: string;
-  type: WorkType;
-  typeCustom: string;
-  stack: string[];
-  link: string;
-  repo: string;
-  createdAt: string;
-  author: string;
-  rating: { avg: number; count: number };
-  demo: true;
-};
+export type { DemoProfile, DemoWork };
+export { creatorDemoProfile };
 
-const d = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000).toISOString();
+/** Целевые количества демо-слоя при данных базисах из БД. */
+export function demoCounts(baseUsers: number, baseWorks: number): { users: number; works: number } {
+  const shown = showcaseStats({ users: baseUsers, works: baseWorks, verified: 0, reviews: 0 });
+  return {
+    users: Math.max(0, shown.users - baseUsers),
+    works: Math.max(0, shown.works - baseWorks),
+  };
+}
 
-export const DEMO_WORKS: DemoWork[] = [
-  {
-    id: "demo-01",
-    title: "Nebula — дашборд аналитики для SaaS",
-    summary: "Realtime-графики, когортный анализ и отчёты с экспортом в CSV. Тёмная тема, Lighthouse 99.",
-    type: "webapp",
-    typeCustom: "",
-    stack: ["Next.js", "TypeScript", "Recharts", "Tailwind"],
-    link: "https://vercel.com/templates",
-    repo: "https://github.com/vercel/next.js",
-    createdAt: d(2),
-    author: "NebulaDev",
-    rating: { avg: 4.9, count: 27 },
-    demo: true,
-  },
-  {
-    id: "demo-02",
-    title: "Lens — OSINT-кейс: деанон фейкового магазина",
-    summary: "Полная цепочка: домен → хостинг → платёжки. Кейс раскрыт за 6 часов, материалы переданы в поддержку.",
-    type: "osint",
-    typeCustom: "",
-    stack: ["OSINT", "Amass", "Google Dorks"],
-    link: "https://bellingcat.com",
-    repo: "",
-    createdAt: d(4),
-    author: "TraceHawk",
-    rating: { avg: 4.7, count: 18 },
-    demo: true,
-  },
-  {
-    id: "demo-03",
-    title: "Aurora UI Kit — дизайн-система для финтех-приложения",
-    summary: "120+ компонентов, токены, автолейауты и светлая/тёмная темы. Готова к передаче в разработку.",
-    type: "design-project",
-    typeCustom: "",
-    stack: ["Figma", "Design Tokens"],
-    link: "https://figma.com/community",
-    repo: "",
-    createdAt: d(5),
-    author: "PixelMuse",
-    rating: { avg: 5.0, count: 31 },
-    demo: true,
-  },
-  {
-    id: "demo-04",
-    title: "CardioBot — телеграм-бот напоминаний о приёме лекарств",
-    summary: "Гибкое расписание, push через telegraf, 3 200 активных пользователей, open source.",
-    type: "bot",
-    typeCustom: "",
-    stack: ["Node.js", "Telegraf", "Redis"],
-    link: "https://t.me/telegram",
-    repo: "https://github.com/telegraf/telegraf",
-    createdAt: d(7),
-    author: "PulseMaker",
-    rating: { avg: 4.8, count: 44 },
-    demo: true,
-  },
-  {
-    id: "demo-05",
-    title: "MicroStore — лендинг мини-магазина авторской керамики",
-    summary: "Загрузка 0.4 с, корзина на localStorage, приём заказов в Telegram. Конверсия 7.2%.",
-    type: "site",
-    typeCustom: "",
-    stack: ["Astro", "Tailwind"],
-    link: "https://astro.build",
-    repo: "https://github.com/withastro/astro",
-    createdAt: d(9),
-    author: "ClayStudio",
-    rating: { avg: 4.6, count: 12 },
-    demo: true,
-  },
-  {
-    id: "demo-06",
-    title: "Relay — расширение Chrome для быстрой правки текста",
-    summary: "Горячие клавиши, локальные словари, офлайн-режим. 4 800 установок из Web Store.",
-    type: "webapp",
-    typeCustom: "",
-    stack: ["TypeScript", "Chrome API", "Vite"],
-    link: "https://developer.chrome.com/docs/extensions",
-    repo: "https://github.com/GoogleChrome/chrome-extensions-samples",
-    createdAt: d(11),
-    author: "KeyBind",
-    rating: { avg: 4.5, count: 39 },
-    demo: true,
-  },
-  {
-    id: "demo-07",
-    title: "Kinet — мобильное приложение трекинга привычек",
-    summary: "Оффлайн-first, Haptics, виджеты iOS. 12k загрузок, рейтинг 4.8 в App Store.",
-    type: "mobile",
-    typeCustom: "",
-    stack: ["React Native", "Expo", "SQLite"],
-    link: "https://expo.dev",
-    repo: "https://github.com/expo/expo",
-    createdAt: d(13),
-    author: "HabitSmith",
-    rating: { avg: 4.8, count: 52 },
-    demo: true,
-  },
-  {
-    id: "demo-08",
-    title: "SignalGraph — OSINT-раскрытие: карта ботофермы",
-    summary: "Граф связей 1 400 аккаунтов, визуализация в Cytoscape.js, отчёт с таймлайном активности.",
-    type: "osint-reveal",
-    typeCustom: "",
-    stack: ["Cytoscape.js", "Python", "NetworkX"],
-    link: "https://gephi.org",
-    repo: "",
-    createdAt: d(15),
-    author: "GraphWarden",
-    rating: { avg: 4.9, count: 22 },
-    demo: true,
-  },
-  {
-    id: "demo-09",
-    title: "Terminal Portfolio — интерактивное резюме в консоли",
-    summary: "Псевдо-терминал с командами, темами и пасхалками. Вирусный пост на dev.to — 40k просмотров.",
-    type: "site",
-    typeCustom: "",
-    stack: ["React", "xterm.js"],
-    link: "https://vercel.com/templates",
-    repo: "https://github.com/m4tt72/terminal",
-    createdAt: d(18),
-    author: "stdin_dev",
-    rating: { avg: 4.7, count: 63 },
-    demo: true,
-  },
-  {
-    id: "demo-10",
-    title: "BrandForge — брендинг для кофейни Roast&Code",
-    summary: "Логотип, палитра, упаковка и гайдлайн на 28 страниц. Полный ребрендинг за 3 недели.",
-    type: "design",
-    typeCustom: "",
-    stack: ["Illustrator", "Brand Guide"],
-    link: "https://behance.net",
-    repo: "",
-    createdAt: d(21),
-    author: "InkMonk",
-    rating: { avg: 4.9, count: 17 },
-    demo: true,
-  },
-  {
-    id: "demo-11",
-    title: "Pipeline — CI/CD-скрипт деплоя монорепы за 40 секунд",
-    summary: "Кэш turbo, матрица тестов, автомерж preview-веток. Минус 70% времени сборки.",
-    type: "script",
-    typeCustom: "",
-    stack: ["GitHub Actions", "Turborepo", "Bash"],
-    link: "https://github.com/features/actions",
-    repo: "https://github.com/vercel/turborepo",
-    createdAt: d(24),
-    author: "FlowOps",
-    rating: { avg: 4.6, count: 15 },
-    demo: true,
-  },
-  {
-    id: "demo-12",
-    title: "Zavod — архитектура highload-сервиса уведомлений",
-    summary: "Проектирование: 50k rps, fan-out через Redis Streams, идемпотентность, схемы и ADR.",
-    type: "architecture",
-    typeCustom: "",
-    stack: ["Kafka", "Redis", "Postgres", "ADR"],
-    link: "https://kafka.apache.org",
-    repo: "",
-    createdAt: d(27),
-    author: "SysArchitect",
-    rating: { avg: 4.8, count: 19 },
-    demo: true,
-  },
-  {
-    id: "demo-13",
-    title: "Echo — корпоративный мессенджер с самоуничтожением сообщений",
-    summary: "E2E-шифрование, комнаты, роли. Внедрён в 3 компаниях, 800+ рабочих мест.",
-    type: "webapp",
-    typeCustom: "",
-    stack: ["WebSockets", "Signal", "Vue 3"],
-    link: "https://vuejs.org",
-    repo: "https://github.com/vuejs/vue",
-    createdAt: d(30),
-    author: "CipherTalk",
-    rating: { avg: 4.7, count: 26 },
-    demo: true,
-  },
-  {
-    id: "demo-14",
-    title: "Mimic — телеграм-бот переводчика сленга",
-    summary: "NLP-модель на fastText, 96% точности на словаре 40k сленговых выражений.",
-    type: "bot",
-    typeCustom: "",
-    stack: ["Python", "fastText", "aiogram"],
-    link: "https://t.me/telegram",
-    repo: "https://github.com/aiogram/aiogram",
-    createdAt: d(33),
-    author: "SlangWiz",
-    rating: { avg: 4.4, count: 21 },
-    demo: true,
-  },
-  {
-    id: "demo-15",
-    title: "Atlas — интерактивная карта маршрутов путешествий",
-    summary: "Mapbox GL, кластеризация точек, офлайн-тайлы, 3D-режим. Блог-кейс с 90k прочтений.",
-    type: "site",
-    typeCustom: "",
-    stack: ["Mapbox", "Svelte", "GeoJSON"],
-    link: "https://mapbox.com",
-    repo: "https://github.com/mapbox/mapbox-gl-js",
-    createdAt: d(36),
-    author: "WanderGeek",
-    rating: { avg: 4.8, count: 34 },
-    demo: true,
-  },
-  {
-    id: "demo-16",
-    title: "Vault — менеджер паролей с нулевым разглашением",
-    summary: "WebCrypto, АРМ-шифрование, экспорт/импорт. Прошёл внутренний пентест без критики.",
-    type: "webapp",
-    typeCustom: "",
-    stack: ["WebCrypto", "React", "Vite"],
-    link: "https://developer.mozilla.org/docs/Web/API/Web_Crypto_API",
-    repo: "https://github.com/hashicorp/vault",
-    createdAt: d(40),
-    author: "SafeHands",
-    rating: { avg: 4.9, count: 28 },
-    demo: true,
-  },
-  {
-    id: "demo-17",
-    title: "Glyphs — генератор айти-открыток и обложек",
-    summary: "Canvas API, шаблоны, экспорт в PNG/SVG. 15k генераций за первый месяц.",
-    type: "webapp",
-    typeCustom: "",
-    stack: ["Canvas API", "Next.js", "Zustand"],
-    link: "https://vercel.com/templates",
-    repo: "",
-    createdAt: d(45),
-    author: "PixelForge",
-    rating: { avg: 4.5, count: 41 },
-    demo: true,
-  },
-  {
-    id: "demo-18",
-    title: "Pulse OSINT — кейс: разработка схемы фишинговой сети",
-    summary: "Разобрана инфраструктура из 23 доменов, вместе с сертификацией и хронологией. Отчёт 40 страниц.",
-    type: "osint",
-    typeCustom: "",
-    stack: ["OSINT", "Shodan", "crt.sh"],
-    link: "https://shodan.io",
-    repo: "",
-    createdAt: d(52),
-    author: "NetSleuth",
-    rating: { avg: 4.8, count: 25 },
-    demo: true,
-  },
-  {
-    id: "demo-19",
-    title: "Meadow — дизайн-проект лендинга для эко-фермы",
-    summary: "Исследование, мудборд, прототип, UI-кит и передача в разработку. Client NPS 10/10.",
-    type: "design-project",
-    typeCustom: "",
-    stack: ["Figma", "UX Research"],
-    link: "https://figma.com/community",
-    repo: "",
-    createdAt: d(58),
-    author: "GreenPixel",
-    rating: { avg: 4.7, count: 14 },
-    demo: true,
-  },
-  {
-    id: "demo-20",
-    title: "Orbit — архитектура мультирегионального S3-совместимого хранилища",
-    summary: "Проектирование репликации, erasure coding, DR-план. Экономия 38% на инфраструктуре.",
-    type: "architecture",
-    typeCustom: "",
-    stack: ["MinIO", "Terraform", "GRPC"],
-    link: "https://min.io",
-    repo: "https://github.com/minio/minio",
-    createdAt: d(65),
-    author: "CloudArch",
-    rating: { avg: 4.6, count: 11 },
-    demo: true,
-  },
-];
+/** Кэш генерации на процесс: пересчитывается при смене дня или целевых чисел. */
+let cacheDay = -1;
+let cachedUsers: DemoProfile[] = [];
+let cachedWorks: DemoWork[] = [];
+
+function getCommunity(users: number, works: number): { users: DemoProfile[]; works: DemoWork[] } {
+  const day = Math.floor(Date.now() / 86_400_000);
+  if (day !== cacheDay || cachedUsers.length !== users || cachedWorks.length !== works) {
+    // Работ считаем независимо: просим у генератора столько профилей,
+    // чтобы хватило на нужное число работ (≈1.6 работы на профиль)
+    const gen = generateDemoCommunity(Math.max(users, Math.ceil(works / 1.6)));
+    cacheDay = day;
+    cachedUsers = gen.users.slice(0, users);
+    cachedWorks = gen.works.slice(0, works);
+  }
+  return { users: cachedUsers, works: cachedWorks };
+}
+
+/**
+ * Инициализация витрины текущим «выпуском» демо-сообщества.
+ * Вызывается из страниц с реальными числами из БД — дальше все
+ * геттеры (профили, поиск, работы) работают с этим выпуском.
+ */
+export function ensureDemoVolume(baseUsers: number, baseWorks: number): { users: DemoProfile[]; works: DemoWork[] } {
+  const target = demoCounts(baseUsers, baseWorks);
+  return getCommunity(target.users, target.works);
+}
+
+/** Все демо-работы текущего выпуска. */
+export function listDemoWorks(): DemoWork[] {
+  return cachedWorks;
+}
+
+/** Демо-профиль по юзернейму (для /u/<username>). Создатель — только реальный аккаунт. */
+export function getDemoProfile(username: string): DemoProfile | null {
+  const uname = username.trim().toLowerCase();
+  if (!uname) return null;
+  return cachedUsers.find((u) => u.username === uname) ?? null;
+}
+
+/** Демо-работы конкретного демо-профиля (для страницы профиля). */
+export function getDemoWorksByUsername(username: string): DemoWork[] {
+  const uname = username.trim().toLowerCase();
+  if (!uname) return [];
+  return cachedWorks.filter((w) => w.authorUsername.toLowerCase() === uname);
+}
+
+/**
+ * Поиск демо-профилей: точное совпадение по публичному ID
+ * или начало юзернейма / имени. Реальный создатель (ID 1) не дублируется —
+ * его аккаунт всегда находится среди настоящих пользователей.
+ */
+export function searchDemoProfiles(q: string, limit = 20): DemoProfile[] {
+  const query = q.trim().toLowerCase();
+  if (!query) return [];
+  const out: DemoProfile[] = [];
+  for (const u of cachedUsers) {
+    if (u.id === query || u.username.startsWith(query) || u.displayName.toLowerCase().startsWith(query)) {
+      out.push(u);
+      if (out.length >= limit) break;
+    }
+  }
+  return out;
+}

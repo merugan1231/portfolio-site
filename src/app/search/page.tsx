@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 type Found = {
+  id: string | null;
   username: string | null;
   displayName: string;
   avatarEmoji: string;
@@ -11,6 +12,8 @@ type Found = {
   bio: string;
   roles: string[];
   plan: "free" | "pro";
+  creator: boolean;
+  demo: boolean;
 };
 
 /** Роли-фильтры — как в кабинете (src/lib/users.ts USER_ROLES). */
@@ -66,14 +69,14 @@ export default function SearchPage() {
     <section className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
       <h1 className="text-2xl font-extrabold text-white sm:text-3xl">Люди</h1>
       <p className="mt-1 text-sm text-zinc-400">
-        Найдите пользователя по юзернейму или отфильтруйте по роли — программисты, осинтеры, дизайнеры и другие.
+        Найдите пользователя по юзернейму, имени или ID (например, «1» — аккаунт создателя) — или отфильтруйте по роли.
       </p>
 
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
         className="mt-6 w-full rounded-xl border border-white/10 bg-zinc-900/70 px-4 py-3.5 text-white outline-none transition-colors focus:border-indigo-400"
-        placeholder="Введите юзернейм…"
+        placeholder="Юзернейм, имя или ID…"
         autoFocus
       />
 
@@ -106,10 +109,10 @@ export default function SearchPage() {
 
       <div className="mt-6 space-y-3">
         {searched && users.length === 0 && (
-          <p className="text-sm text-zinc-500">Никого не нашли. Попробуйте другой юзернейм или снять фильтр роли.</p>
+          <p className="text-sm text-zinc-500">Никого не нашли. Попробуйте другой юзернейм, ID или снять фильтр роли.</p>
         )}
         {users.map((u) => (
-          <Link key={u.username} href={`/u/${u.username}`} className="card flex items-center gap-4 p-4 transition-transform hover:-translate-y-0.5">
+          <Link key={`${u.demo ? "demo" : "real"}-${u.username}`} href={`/u/${u.username}`} className="card flex items-center gap-4 p-4 transition-transform hover:-translate-y-0.5">
             {u.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={u.avatarUrl} alt="" className="h-12 w-12 rounded-full object-cover" />
@@ -121,11 +124,20 @@ export default function SearchPage() {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-semibold text-white">{u.displayName || u.username}</span>
+                {u.creator && (
+                  <span className="rounded-md bg-violet-400/15 px-1.5 py-0.5 text-[10px] font-bold text-violet-300">👑 СОЗДАТЕЛЬ</span>
+                )}
                 {u.plan === "pro" && (
                   <span className="rounded-md bg-amber-300/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">PRO</span>
                 )}
+                {u.demo && (
+                  <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-medium text-amber-200">Демо</span>
+                )}
               </div>
-              <div className="text-sm text-zinc-500">@{u.username}</div>
+              <div className="text-sm text-zinc-500">
+                @{u.username}
+                {u.id && <span className="ml-2 text-xs text-zinc-600">ID: {u.id}</span>}
+              </div>
               {u.roles.length > 0 && (
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {u.roles.map((id) => {

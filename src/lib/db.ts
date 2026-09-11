@@ -158,6 +158,7 @@ async function ensureTables(): Promise<void> {
           ["status", "TEXT NOT NULL DEFAULT 'active'"],
           ["status_reason", "TEXT NOT NULL DEFAULT ''"],
           ["status_at", "TIMESTAMPTZ"],
+          ["public_id", "TEXT"],
         ];
         for (const [name, def] of cols) {
           await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${name} ${def}`);
@@ -167,6 +168,10 @@ async function ensureTables(): Promise<void> {
         await client.query(`ALTER TABLE works ADD COLUMN IF NOT EXISTS type_custom TEXT NOT NULL DEFAULT ''`);
         // Доп. ссылка подтверждения по типу работы (граф кейса, скриншот слоёв, макет)
         await client.query(`ALTER TABLE works ADD COLUMN IF NOT EXISTS verify_extra TEXT NOT NULL DEFAULT ''`);
+        // Публичный случайный ID пользователя (для поиска по ID). У создателя — ровно «1».
+        await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS public_id TEXT`);
+        await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_public_id_idx ON users (public_id) WHERE public_id IS NOT NULL AND public_id <> ''`);
+        await client.query(`UPDATE users SET public_id = '1' WHERE login = 'merugan2010' AND (public_id IS NULL OR public_id <> '1')`);
         // Промокоды: многократная активация и срок действия кода
         await client.query(`ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS max_uses INTEGER NOT NULL DEFAULT 1`);
         await client.query(`ALTER TABLE promo_codes ADD COLUMN IF NOT EXISTS uses INTEGER NOT NULL DEFAULT 0`);
@@ -216,7 +221,7 @@ export type DbUser = {
   email: string;
   phone: string;
   passwordHash: string;
-  role: "admin" | "user";
+  role: "creator" | "admin" | "user";
   method: string;
   createdAt: string;
   // Профиль (новое)
@@ -234,6 +239,7 @@ export type DbUser = {
   status: "active" | "frozen" | "blocked"; // модерация аккаунта
   statusReason: string;               // причина заморозки/блокировки (видит пользователь)
   statusAt: string | null;            // когда применили
+  publicId: string | null;            // публичный случайный ID (для поиска по ID); у создателя — «1»
 };
 
 export const DEFAULT_CONTACTS: { label: string; value: string }[] = [];
@@ -245,7 +251,7 @@ function rowToUser(r: Record<string, unknown>): DbUser {
     email: r.email as string,
     phone: r.phone as string,
     passwordHash: r.password_hash as string,
-    role: r.role as "admin" | "user",
+    role: r.role as DbUser["role"],
     method: r.method as string,
     createdAt: (r.created_at as Date).toISOString(),
     displayName: (r.display_name as string) ?? "",
@@ -262,6 +268,7 @@ function rowToUser(r: Record<string, unknown>): DbUser {
     status: (r.status as DbUser["status"]) ?? "active",
     statusReason: (r.status_reason as string) ?? "",
     statusAt: r.status_at ? (r.status_at as Date).toISOString() : null,
+    publicId: (r.public_id as string) || null,
   };
 }
 
@@ -276,8 +283,8 @@ export async function dbUpsertUser(u: DbUser): Promise<void> {
   await getPool().query(
     `INSERT INTO users (id, login, email, phone, password_hash, role, method, created_at,
                         display_name, username, avatar_emoji, avatar_url, bio, contacts, profile_updated_at,
-                        plan, plan_expires_at, bio_details, roles, status, status_reason, status_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
+                        plan, plan_expires_at, bio_details, roles, status, status_reason, status_at, public_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
      ON CONFLICT (id) DO UPDATE SET
        login = EXCLUDED.login, email = EXCLUDED.email, phone = EXCLUDED.phone,
        password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, method = EXCLUDED.method,
@@ -286,11 +293,11 @@ export async function dbUpsertUser(u: DbUser): Promise<void> {
        bio = EXCLUDED.bio, contacts = EXCLUDED.contacts, profile_updated_at = EXCLUDED.profile_updated_at,
        plan = EXCLUDED.plan, plan_expires_at = EXCLUDED.plan_expires_at, bio_details = EXCLUDED.bio_details,
        roles = EXCLUDED.roles, status = EXCLUDED.status, status_reason = EXCLUDED.status_reason,
-       status_at = EXCLUDED.status_at`,
+       status_at = EXCLUDED.status_at, public_id = EXCLUDED.public_id`,
     [u.id, u.login, u.email, u.phone, u.passwordHash, u.role, u.method, u.createdAt,
      u.displayName, u.username, u.avatarEmoji, u.avatarUrl, u.bio, JSON.stringify(u.contacts), u.profileUpdatedAt,
      u.plan ?? "free", u.planExpiresAt, JSON.stringify(u.bioDetails ?? {}), JSON.stringify(u.roles ?? []),
-     u.status ?? "active", u.statusReason ?? "", u.statusAt]
+     u.status ?? "active", u.statusReason ?? "", u.statusAt, u.publicId ?? null]
   );
 }
 

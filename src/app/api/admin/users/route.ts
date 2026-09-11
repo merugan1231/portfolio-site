@@ -24,6 +24,7 @@ export async function GET() {
       statusReason: u.statusReason ?? "",
       statusAt: u.statusAt ?? null,
       username: u.username,
+      publicId: u.publicId ?? null,
     })),
   });
 }
