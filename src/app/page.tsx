@@ -4,6 +4,7 @@ import { getUsers } from "@/lib/storage";
 import type { StoredUser } from "@/lib/storage";
 import { getCurrentUser } from "@/lib/current-user";
 import { AudienceSection } from "@/components/AudienceSection";
+import LiveStats from "@/components/LiveStats";
 
 export const dynamic = "force-dynamic";
 
@@ -96,20 +97,8 @@ export default async function Home({
             </Link>
           </div>
 
-          {/* Цифры сервиса */}
-          <dl className="mt-8 grid w-full max-w-2xl grid-cols-2 gap-3 sm:mt-10 sm:grid-cols-4 sm:gap-4">
-            {[
-              { label: "Участников", value: stats.users },
-              { label: "Работ", value: stats.works },
-              { label: "Подтверждено авторство", value: stats.verified },
-              { label: "Оценок", value: stats.reviews },
-            ].map((s) => (
-              <div key={s.label} className="card px-3 py-4 text-center sm:px-4 sm:py-5">
-                <dt className="order-2 mt-1 text-[10px] uppercase leading-tight tracking-wide text-zinc-500 sm:text-xs">{s.label}</dt>
-                <dd className="order-1 text-2xl font-extrabold text-white sm:text-3xl">{s.value}</dd>
-              </div>
-            ))}
-          </dl>
+          {/* Цифры сервиса — «живые», слегка меняются каждые несколько секунд */}
+          <LiveStats base={stats} />
         </div>
       </section>
 
