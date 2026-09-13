@@ -16,6 +16,7 @@ type Profile = {
   planExpiresAt: string | null;
   isPro: boolean;
   memberSince: string;
+  publicId: string | null;
 };
 
 type Work = {
@@ -111,6 +112,13 @@ export default function CabinetPage() {
             )}
           </div>
           {profile.username && <p className="mt-0.5 text-sm text-zinc-400">@{profile.username}</p>}
+          {profile.publicId && (
+            <p className="mt-1.5 max-w-xl text-xs leading-relaxed text-zinc-500">
+              <span className="font-semibold text-zinc-300">ID {profile.publicId}</span> — ваш номер в DevShelf:
+              он навсегда закреплён за вами, виден в вашем публичном профиле и по нему вас можно найти в разделе
+              «Люди» — даже после смены имени или юзернейма. У создателя сервиса ID «1».
+            </p>
+          )}
           {(profile.roles ?? []).length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {(profile.roles ?? []).map((id) => {

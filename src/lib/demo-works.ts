@@ -1,5 +1,5 @@
 import { creatorDemoProfile, generateDemoCommunity, showcaseStats, type DemoProfile, type DemoWork } from "@/lib/showcase";
-import { WORK_TYPES } from "@/lib/works";
+import { WORK_TYPES, getWorkReviews, getWorkRating, type Work, type WorkType, type Review } from "@/lib/works";
 
 const WORK_TYPE_LABELS: Record<string, string> = Object.fromEntries(WORK_TYPES.map((t) => [t.id, t.label]));
 
@@ -102,11 +102,123 @@ export function getDemoWorksByUsername(username: string): DemoWork[] {
 }
 
 /**
+ * Полный объект работы из демо-слоя (для страницы /works/[id]).
+ * Демо-работы живут вне БД: отзывы у них — настоящие, из общего хранилища
+ * (review.workId = id демо-работы), а поля verify_status/verifyToken —
+ * «verified» без токена (авторство демо-аккаунта подтверждено по умолчанию).
+ */
+export function getDemoWorkFull(id: string): Work | null {
+  const w = cachedWorks.find((x) => x.id === id);
+  if (!w) return null;
+  const created = w.createdAt;
+  return {
+    id: w.id,
+    userId: `demo:${w.authorUsername}`,
+    type: w.type as WorkType,
+    typeCustom: w.typeCustom,
+    title: w.title,
+    summary: w.summary,
+    details:
+      `${w.summary}\n\nПроцесс: исследование и прототип, затем основная реализация ` +
+      `(${w.stack.join(", ")}). Материалы проекта собраны в кейсе, ссылка выше.
+
+Вложение времени — несколько недель вечерами; результат используется в реальных задачах автора.`,
+    team: "",
+    stack: w.stack.join(", "),
+    budget: "",
+    potential: "",
+    links: w.link ? [{ label: "Открыть проект", url: w.link }] : [],
+    verifyToken: "",
+    verifyUrl: "",
+    verifyExtra: "",
+    verifyStatus: "verified",
+    verifyNote: "Демо-работа: авторство подтверждено по умолчанию",
+    createdAt: created,
+    updatedAt: created,
+  };
+}
+
+/** Есть ли демо-работа с таким ID. */
+export function isDemoWorkId(id: string): boolean {
+  return cachedWorks.some((w) => w.id === id);
+}
+
+/** Отзывы демо-работы: те же настоящие отзывы из общего хранилища. */
+export async function getDemoWorkReviews(workId: string, includeHidden = false): Promise<Review[]> {
+  return getWorkReviews(workId, includeHidden);
+}
+
+/**
+ * Рейтинг демо-работы: настоящие отзывы пользователей складываются
+ * с базовой витринной оценкой (средневзвешенно по количеству).
+ */
+export async function getDemoWorkRating(workId: string): Promise<{ avg: number; count: number }> {
+  const base = cachedWorks.find((w) => w.id === workId)?.rating ?? { avg: 0, count: 0 };
+  const reviews = await getWorkReviews(workId);
+  const realCount = reviews.length;
+  const realSum = reviews.reduce((s, r) => s + r.stars, 0);
+  const count = base.count + realCount;
+  if (count === 0) return { avg: 0, count: 0 };
+  const avg = Math.round(((base.avg * base.count + realSum) / count) * 10) / 10;
+  return { avg, count };
+}
+
+/**
+ * Все демо-профили текущего выпуска (для списка «Люди» без запроса).
+ * Список большой (сотни), поэтому отдаём страницами.
+ */
+export function listDemoProfiles(offset = 0, limit = 24): DemoProfile[] {
+  return cachedUsers.slice(Math.max(0, offset), Math.max(0, offset) + Math.max(0, limit));
+}
+
+/** Сколько всего демо-профилей в текущем выпуске. */
+export function countDemoProfiles(): number {
+  return cachedUsers.length;
+}
+
+/**
+ * Демо-профили по категории (роли): роль входит в набор ролей профиля.
+ * Используется фильтром категорий на странице «Люди».
+ */
+export function listDemoProfilesByRole(role: string, limit = 48): DemoProfile[] {
+  const r = role.trim();
+  if (!r) return [];
+  const out: DemoProfile[] = [];
+  for (const u of cachedUsers) {
+    if ((u.roles ?? []).includes(r)) {
+      out.push(u);
+      if (out.length >= limit) break;
+    }
+  }
+  return out;
+}
+
+/**
+ * Демо-профили по специализации: точное совпадение строки специализации
+ * или подстрока в ней (регистронезависимо).
+ */
+export function searchDemoProfilesBySpecialization(specialization: string, limit = 24): DemoProfile[] {
+  const needle = specialization.trim().toLowerCase();
+  if (!needle) return [];
+  const out: DemoProfile[] = [];
+  for (const u of cachedUsers) {
+    const spec = (u.bioDetails.specialization ?? "").toLowerCase();
+    if (spec && (spec === needle || spec.includes(needle))) {
+      out.push(u);
+      if (out.length >= limit) break;
+    }
+  }
+  return out;
+}
+
+/**
  * Поиск демо-профилей: точное совпадение по публичному ID
  * или начало юзернейма / имени. Реальный создатель (ID 1) не дублируется —
  * его аккаунт всегда находится среди настоящих пользователей.
+ * Если spec задан — фильтрует по специализации вместо текстового запроса.
  */
-export function searchDemoProfiles(q: string, limit = 20): DemoProfile[] {
+export function searchDemoProfiles(q: string, limit = 20, spec?: string): DemoProfile[] {
+  if (spec !== undefined) return searchDemoProfilesBySpecialization(spec, limit);
   const query = q.trim().toLowerCase();
   if (!query) return [];
   const out: DemoProfile[] = [];

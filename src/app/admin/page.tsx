@@ -379,9 +379,9 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Вкладки — на телефоне прокручиваются вбок, не ломая сетку */}
-      <div className="-mx-4 mb-6 overflow-x-auto px-4 pb-1 sm:mx-0 sm:mb-8 sm:overflow-hidden sm:px-0">
-        <div className="flex gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5">
+      {/* Вкладки: переносятся на новые строки, каждая подпись видна полностью */}
+      <div className="mb-6 sm:mb-8">
+        <div className="flex flex-wrap gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5">
           {(
             [
               ["portfolio", "Портфолио"],
@@ -398,7 +398,7 @@ export default function AdminPage() {
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`shrink-0 whitespace-nowrap rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-300 min-[1100px]:flex-1 min-[1100px]:px-3.5 min-[1100px]:text-sm sm:flex-1 sm:px-3.5 sm:text-sm ${
+              className={`whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-300 min-[1100px]:flex-1 ${
                 tab === key
                   ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
                   : "text-zinc-400 hover:bg-white/5 hover:text-white"

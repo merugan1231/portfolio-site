@@ -96,12 +96,14 @@ export default async function Home({
     })
   );
 
-  // Если реальных работ меньше 6 — полку добираем демо-работами по счётчику
+  // Если реальных работ меньше 6 — полку добираем демо-работами по счётчику.
+  // Демо-работы теперь тоже открываются: href ведёт на /works/<id демо-работы>.
   const demoVolume = ensureDemoVolume(stats.users, stats.works).works.length;
+  const demoShelf = demoVolume === 0 || realItems.length >= 6 ? [] : listDemoShelf(6 - realItems.length);
   const shelfItems: ShelfItem[] =
-    realItems.length >= 6 || demoVolume === 0
+    demoShelf.length === 0
       ? realItems
-      : [...realItems, ...listDemoShelf(6 - realItems.length)];
+      : [...realItems, ...demoShelf.map((w) => ({ ...w, href: `/works/${w.id}` }))];
 
   return (
     <>

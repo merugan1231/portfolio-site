@@ -13,7 +13,7 @@ const TYPE_LABELS: Record<string, string> = Object.fromEntries(WORK_TYPES.map((t
  * поиск по названию/описанию/стеку + фильтр по типу. Доступно всем.
  * К реальным работам пользователей добавлено демо-наполнение (витринные
  * примеры), чтобы раздел не выглядел пустым на старте. Демо-карточки
- * помечены плашкой «Демо» и не ведут на страницу работы.
+ * открываются так же, как настоящие: у них есть своя страница /works/<id>.
  */
 
 type Card = {
@@ -161,23 +161,14 @@ export default async function ExplorePage({
                   <span className="text-zinc-600">Автор скрыт</span>
                 )}
                 <span className="flex items-center gap-2 text-zinc-600">
-                  {c.demo && (
-                    <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-medium text-amber-200">
-                      Демо
-                    </span>
-                  )}
                   {c.date.toLocaleDateString("ru-RU")}
                 </span>
               </div>
             </>
           );
 
-          return c.demo ? (
-            <div key={c.key} className="card group flex flex-col p-6 opacity-90">
-              {inner}
-            </div>
-          ) : (
-            <Link key={c.key} href={`/works/${c.id}`} className="card group flex flex-col p-6">
+          return (
+            <Link key={c.key} href={`/works/${c.id}`} className={`card group flex flex-col p-6 ${c.demo ? "opacity-90" : ""}`}>
               {inner}
             </Link>
           );

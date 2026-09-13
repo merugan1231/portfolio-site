@@ -187,20 +187,15 @@ export default function PublicProfilePage() {
               <p className="mt-1.5 line-clamp-2 text-sm text-zinc-400">{w.summary}</p>
               <div className="mt-2 flex items-center justify-between text-xs text-amber-300">
                 <span>⭐ {w.rating.count ? `${w.rating.avg} (${w.rating.count})` : "нет оценок"}</span>
-                {isDemo && (
-                  <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-medium text-amber-200">
-                    Демо
-                  </span>
-                )}
               </div>
             </>
           );
-          return isDemo ? (
-            <div key={w.id} className="card block p-5 opacity-90">
-              {card}
-            </div>
-          ) : (
-            <Link key={w.id} href={`/works/${w.id}`} className="card block p-5 transition-transform hover:-translate-y-0.5">
+          return (
+            <Link
+              key={w.id}
+              href={`/works/${w.id}`}
+              className={`card block p-5 transition-transform hover:-translate-y-0.5 ${isDemo ? "opacity-90" : ""}`}
+            >
               {card}
             </Link>
           );

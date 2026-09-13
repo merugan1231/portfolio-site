@@ -29,6 +29,7 @@ export async function GET() {
       usernameLocked: !!user.username, // юзернейм задаётся один раз навсегда
       cooldownHours: Math.ceil(cooldownLeft / 3600000),
       memberSince: user.createdAt, // приватно: только для владельца аккаунта
+      publicId: user.publicId,      // публичный ID: по нему вас находят в поиске людей
     },
   });
 }

@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { searchUsersByUsername, getUsers } from "@/lib/storage";
 import { USER_ROLE_IDS } from "@/lib/users";
-import { ensureDemoVolume, searchDemoProfiles, type DemoProfile } from "@/lib/demo-works";
+import { ensureDemoVolume, searchDemoProfiles, listDemoProfiles, countDemoProfiles, listDemoProfilesByRole, type DemoProfile } from "@/lib/demo-works";
+
+/** Лимит страницы списка (когда запрос пустой). */
+const LIST_PAGE = 24;
 
 /** Точный поиск по публичному ID (в т.ч. «1» — создатель). */
 async function findByPublicId(id: string) {
@@ -15,6 +18,8 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const q = params.get("q") ?? "";
   const roleParam = params.get("role") ?? "";
+  const specParam = params.get("spec") ?? "";
+  const offset = Math.max(0, Number.parseInt(params.get("offset") ?? "0", 10) || 0);
   const role = USER_ROLE_IDS.includes(roleParam as never) ? roleParam : undefined;
 
   // Витрина демо-сообщества: инициализируется числами из БД (идемпотентно)
@@ -28,13 +33,34 @@ export async function GET(request: Request) {
     real = [realByRaw, ...real].slice(0, 20);
   }
 
-  // Демо-профили добавляются только когда нефильтрованный поиск по роли.
+  // Сопоставление строк: после этого поля d внутри map — DemoProfile
+  const demoFilter = <T extends DemoProfile>(arr: T[]) =>
+    arr.filter((d) => !realPublicIds.has(d.id));
+
+  // Демо-профили не добавляются, когда фильтр по роли (демо-профили там не участвуют).
   // Если реальный пользователь с таким же публичным ID уже есть (например,
   // создатель с ID «1») — демо-дубль не показываем.
   const realPublicIds = new Set(allUsers.map((u) => u.publicId).filter(Boolean) as string[]);
-  const demo: DemoProfile[] = role
-    ? []
-    : searchDemoProfiles(q, 8).filter((d) => !realPublicIds.has(d.id));
+
+  const hasQuery = Boolean(q.trim() || role || specParam);
+
+  let demo: DemoProfile[];
+  if (specParam) {
+    // Клик по специализации: все демо с такой спецификой
+    demo = demoFilter(searchDemoProfiles("", 48, specParam));
+  } else if (role) {
+    // Клик по категории (роли): демо-профили тоже участвуют
+    demo = demoFilter(listDemoProfilesByRole(role, 48));
+  } else if (q.trim()) {
+    demo = demoFilter(searchDemoProfiles(q, 24));
+  } else {
+    // Открытие вкладки «Люди»: первая страница общего списка демо-сообщества
+    demo = demoFilter(listDemoProfiles(offset, LIST_PAGE));
+  }
+
+  // totalNeeded: примерная оценка «есть ли ещё» для списка без запроса
+  const totalDemo = countDemoProfiles();
+  const hasMore = !hasQuery && offset + LIST_PAGE < totalDemo;
 
   return NextResponse.json({
     users: [
@@ -46,6 +72,7 @@ export async function GET(request: Request) {
         avatarUrl: u.avatarUrl,
         bio: u.bio,
         roles: u.roles ?? [],
+        specialization: (u.bioDetails as Record<string, string>)?.specialization ?? "",
         plan: u.plan ?? "free",
         creator: u.role === "creator",
         demo: false,
@@ -58,10 +85,13 @@ export async function GET(request: Request) {
         avatarUrl: d.avatarUrl,
         bio: d.bio,
         roles: d.roles,
+        specialization: d.bioDetails.specialization ?? "",
         plan: d.plan,
         creator: d.creator ?? false,
         demo: true,
       })),
     ],
+    hasMore,
+    nextOffset: !hasQuery ? offset + demo.length : 0,
   });
 }

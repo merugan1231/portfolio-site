@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
-import { findUserByUsername } from "@/lib/storage";
+import { findUserByUsername, getUsers } from "@/lib/storage";
 import { getUserWorks, getWorkRating } from "@/lib/works";
-import { getDemoProfile, getDemoWorksByUsername } from "@/lib/demo-works";
+import { ensureDemoVolume, getDemoProfile, getDemoWorksByUsername, getDemoWorkRating } from "@/lib/demo-works";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ username: string }> }) {
   const { username } = await params;
+
+  // Демо-слой должен быть инициализирован в ЭТОМ процессе — иначе
+  // кэш демо-сообщества пуст и профили демо-авторов не открываются
+  // (профиль отдаёт 404). Инициализируем теми же числами, что и витрины.
+  const allUsers = await getUsers();
+  ensureDemoVolume(allUsers.length, 0);
 
   // Демо-профили витрины (вне БД): создатель и демо-сообщество.
   // Настоящие пользователи всегда в приоритете и проверяются ниже.
@@ -25,16 +31,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
         memberSince: demo.memberSince,
         creator: demo.creator ?? false,
       },
-      works: getDemoWorksByUsername(demo.username).map((w) => ({
-        id: w.id,
-        type: w.type,
-        typeCustom: w.typeCustom,
-        title: w.title,
-        summary: w.summary,
-        rating: w.rating,
-        links: [],
-        demo: true,
-      })),
+      works: await Promise.all(
+        getDemoWorksByUsername(demo.username).map(async (w) => ({
+          id: w.id,
+          type: w.type,
+          typeCustom: w.typeCustom,
+          title: w.title,
+          summary: w.summary,
+          rating: await getDemoWorkRating(w.id),
+          links: [],
+          demo: true,
+        }))
+      ),
     });
   }
 

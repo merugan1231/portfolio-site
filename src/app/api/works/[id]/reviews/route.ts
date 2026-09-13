@@ -1,13 +1,22 @@
 import { NextResponse } from "next/server";
 import { getActiveUser } from "@/lib/current-user";
+import { getUsers } from "@/lib/storage";
 import { getWork, getWorkReviews, createReview, getWorkRating } from "@/lib/works";
+import { ensureDemoVolume, isDemoWorkId, getDemoWorkRating } from "@/lib/demo-works";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const work = await getWork(id);
-  if (!work) return NextResponse.json({ error: "Работа не найдена" }, { status: 404 });
+  if (!work) {
+    // инициализируем демо-слой, чтобы отзывы/рейтинг демо-работы были доступны
+    const allUsers = await getUsers();
+    ensureDemoVolume(allUsers.length, 0);
+  }
 
-  const [reviews, rating] = await Promise.all([getWorkReviews(id), getWorkRating(id)]);
+  const [reviews, rating] = await Promise.all([
+    getWorkReviews(id),
+    work ? getWorkRating(id) : getDemoWorkRating(id),
+  ]);
   return NextResponse.json({ reviews, rating });
 }
 
@@ -17,8 +26,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!user) return NextResponse.json({ error: "Войдите, чтобы оставить отзыв" }, { status: 401 });
 
   const work = await getWork(id);
-  if (!work) return NextResponse.json({ error: "Работа не найдена" }, { status: 404 });
-  if (work.userId === user.id) {
+  let isDemo = false;
+  if (!work) {
+    const allUsers = await getUsers();
+    ensureDemoVolume(allUsers.length, 0);
+    isDemo = await isDemoWorkId(id);
+  }
+  if (!work && !isDemo) return NextResponse.json({ error: "Работа не найдена" }, { status: 404 });
+  // Демо-работы оценивать можно (виртуальный автор — демо-аккаунт);
+  // свою реальную работу оценивать нельзя.
+  if (work && work.userId === user.id) {
     return NextResponse.json({ error: "Нельзя оценивать свою работу" }, { status: 403 });
   }
 
@@ -52,5 +69,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const review = await createReview({ workId: id, authorId: user.id, stars, text });
   const rating = await getWorkRating(id);
+  // Для демо-работы возвращаем смешанный рейтинг (витринный + реальные отзывы)
+  if (isDemo) {
+    return NextResponse.json({ ok: true, review, rating: await getDemoWorkRating(id) });
+  }
   return NextResponse.json({ ok: true, review, rating });
 }

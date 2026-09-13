@@ -1,18 +1,38 @@
 import { NextResponse } from "next/server";
 import { getActiveUser } from "@/lib/current-user";
+import { getUsers } from "@/lib/storage";
 import { getWork, updateWork, getUserWorks, autoVerify, getWorkReviews, getWorkRating } from "@/lib/works";
+import { ensureDemoVolume, getDemoWorkFull, isDemoWorkId, getDemoWorkRating } from "@/lib/demo-works";
 
 /** Публичный просмотр работы: данные + отзывы + рейтинг (без verify-токена). */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const work = await getWork(id);
+
+  // Демо-слой должен быть инициализирован и в этом процессе — иначе
+  // демо-работа, открытая напрямую по ссылке, вернёт 404 (кэш пуст)
+  if (!(await getWork(id))) {
+    const allUsers = await getUsers();
+    ensureDemoVolume(allUsers.length, 0);
+  }
+  const work = (await getWork(id)) ?? getDemoWorkFull(id);
   if (!work) return NextResponse.json({ error: "Работа не найдена" }, { status: 404 });
 
   const viewer = await getActiveUser();
-  const [reviews, rating] = await Promise.all([getWorkReviews(id), getWorkRating(id)]);
+  const demoWork = isDemoWorkId(id);
+  const [reviews, rating] = await Promise.all([
+    getWorkReviews(id),
+    demoWork ? getDemoWorkRating(id) : getWorkRating(id),
+  ]);
   const { verifyToken, ...publicWork } = work;
   void verifyToken;
-  return NextResponse.json({ work: publicWork, reviews, rating, viewerIsOwner: viewer?.id === work.userId });
+  const demoOwner = work.userId.startsWith("demo:");
+  return NextResponse.json({
+    work: publicWork,
+    reviews,
+    rating,
+    // Для демо-работ владелец — виртуальный демо-аккаунт, реальные владельцы не видят чужих споров
+    viewerIsOwner: !demoOwner && viewer?.id === work.userId,
+  });
 }
 
 async function getOwnedWork(id: string) {

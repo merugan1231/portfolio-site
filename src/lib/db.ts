@@ -1,4 +1,4 @@
-import { randomBytes } from "crypto";
+import { randomInt, randomBytes } from "crypto";
 import { Pool, type PoolClient } from "pg";
 
 /**
@@ -179,8 +179,23 @@ async function ensureTables(): Promise<void> {
           for (const row of missing.rows) {
             for (let attempt = 0; attempt < 20; attempt++) {
               try {
-                const candidate = randomBytes(4).toString("hex");
+                const candidate = String(randomInt(10_000_000, 100_000_000));
                 await client.query("UPDATE users SET public_id = $1 WHERE id = $2 AND (public_id IS NULL OR public_id = '')", [candidate, row.id]);
+                break;
+              } catch {
+                // коллизия индекса — пробуем другой вариант
+              }
+            }
+          }
+        }
+        // Старые hex-ID (с буквами a–f) заменяем на чисто цифровые 8-значные
+        {
+          const stale = await client.query("SELECT id FROM users WHERE public_id ~ '[^0-9]'");
+          for (const row of stale.rows) {
+            for (let attempt = 0; attempt < 20; attempt++) {
+              try {
+                const candidate = String(randomInt(10_000_000, 100_000_000));
+                await client.query("UPDATE users SET public_id = $1 WHERE id = $2 AND public_id ~ '[^0-9]'", [candidate, row.id]);
                 break;
               } catch {
                 // коллизия индекса — пробуем другой вариант

@@ -1,6 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
-import { randomBytes } from "crypto";
+import { newPublicId } from "./users";
 import { dbEnabled, kvGet, kvSet, kvDel, dbReadUsers, dbUpsertUser, getPool, ensureTablesSafe, type DbUser } from "./db";
 import type { Portfolio } from "./portfolio";
 
@@ -68,10 +68,11 @@ export async function getUsers(): Promise<StoredUser[]> {
       (u as { publicId?: string | null }).publicId = "1";
       mutated = true;
     }
-    // Всем пользователям без ID — выдать случайный 8-значный автоматически
+    // Всем пользователям без ID — выдать случайный 8-значный автоматически;
+    // старые hex-ID (с буквами) заменяем на чисто цифровые
     const withPid = u as { publicId?: string | null };
-    if (!withPid.publicId) {
-      withPid.publicId = randomBytes(4).toString("hex");
+    if (!withPid.publicId || /[^0-9]/.test(withPid.publicId)) {
+      withPid.publicId = newPublicId();
       mutated = true;
     }
   }
