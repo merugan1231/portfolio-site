@@ -174,9 +174,6 @@ export default function SearchPage() {
                   {u.plan === "pro" && (
                     <span className="rounded-md bg-amber-300/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">PRO</span>
                   )}
-                  {u.demo && (
-                    <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-medium text-amber-200">Демо</span>
-                  )}
                 </div>
                 <div className="text-sm text-zinc-500">
                   @{u.username}
