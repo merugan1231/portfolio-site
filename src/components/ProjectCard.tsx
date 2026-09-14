@@ -28,7 +28,7 @@ export default function ProjectCard({ title, description, tags, link, repo, year
             href={link}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-lime-300 underline-offset-4 transition-all hover:-translate-y-0.5 hover:text-lime-200 hover:underline"
+            className="text-lime-300 underline-offset-4 transition-colors hover:text-lime-200 hover:underline"
           >
             Посмотреть сайт →
           </a>
@@ -38,7 +38,7 @@ export default function ProjectCard({ title, description, tags, link, repo, year
             href={repo}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-zinc-400 underline-offset-4 transition-all hover:-translate-y-0.5 hover:text-zinc-200 hover:underline"
+            className="text-zinc-400 underline-offset-4 transition-colors hover:text-zinc-200 hover:underline"
           >
             Код на GitHub →
           </a>

@@ -120,17 +120,26 @@ export default async function Home({
       <section className="relative overflow-hidden">
         <div className="glow left-1/2 top-[-120px] h-[420px] w-[420px] -translate-x-1/2 bg-indigo-500" />
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-5 px-4 py-14 text-center sm:gap-6 sm:px-6 sm:py-24 lg:py-32">
-          <span className="rounded-full border border-lime-300/30 bg-lime-300/10 px-4 py-1.5 text-xs text-lime-200 sm:text-sm">
+          <span className="stagger-item rounded-full border border-lime-300/30 bg-lime-300/10 px-4 py-1.5 text-xs text-lime-200 sm:text-sm" style={{ animationDelay: "0ms" }}>
             Полка работ разработчиков и креаторов
           </span>
-          <h1 className="max-w-3xl text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
+          <h1
+            className="stagger-item max-w-3xl text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl"
+            style={{ animationDelay: "60ms" }}
+          >
             Покажи, <span className="gradient-text">как ты это сделал</span>
           </h1>
-          <p className="max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg">
+          <p
+            className="stagger-item max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg"
+            style={{ animationDelay: "120ms" }}
+          >
             DevShelf — сервис, где программисты, OSINT-специалисты, кейсисты, иллюстраторы и создатели ботов
             собирают портфолио из подтверждённых работ: с процессом, командой, стеком и результатом.
           </p>
-          <div className="mt-2 flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:justify-center sm:gap-4">
+          <div
+            className="stagger-item mt-2 flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:justify-center sm:gap-4"
+            style={{ animationDelay: "180ms" }}
+          >
             <Link href="/register" className="btn btn-primary">
               Создать портфолио →
             </Link>
@@ -160,7 +169,7 @@ export default async function Home({
               <Link
                 key={f.slug}
                 href={`/how/${f.slug}`}
-                className="card reveal block p-6 transition-all duration-300 hover:-translate-y-1 hover:!border-lime-300/40"
+                className="card reveal group block p-6 hover:!border-lime-300/40"
                 style={{ transitionDelay: `${i * 80}ms` }}
               >
                 <span className="text-3xl">{f.icon}</span>
@@ -208,7 +217,7 @@ export default async function Home({
             <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {shelfItems.map((item, i) => (
                 <div key={item.id} className="reveal" style={{ transitionDelay: `${i * 60}ms` }}>
-                  <div className="card flex h-full flex-col p-5 transition-transform hover:-translate-y-0.5">
+                  <div className="card flex h-full flex-col p-5">
                     <div className="flex items-center justify-between gap-2">
                       <span className="rounded-full border border-white/10 px-2.5 py-0.5 text-xs text-zinc-400">
                         {item.typeLabel}

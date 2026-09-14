@@ -398,7 +398,7 @@ export default function AdminPage() {
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-300 min-[1100px]:flex-1 ${
+              className={`whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors min-[1100px]:flex-1 active:scale-[0.98] ${
                 tab === key
                   ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
                   : "text-zinc-400 hover:bg-white/5 hover:text-white"

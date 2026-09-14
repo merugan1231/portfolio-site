@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -42,8 +42,26 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
   const [me, setMe] = useState<Me | undefined>(undefined);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
   const router = useRouter();
+
+  // Закрытие дропдауна: Escape и клик вне (frontend-ui-engineering: keyboard + outside click)
+  useEffect(() => {
+    if (!menu) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenu(false);
+    }
+    function onPointer(e: PointerEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenu(false);
+    }
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointer);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointer);
+    };
+  }, [menu]);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -73,7 +91,7 @@ export default function Navbar() {
             <Link
               key={l.href}
               href={l.href}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white ${
+              className={`nav-link rounded-lg px-4 py-2 text-sm font-medium hover:bg-white/5 hover:text-white ${
                 pathname === l.href ? "text-lime-300" : "text-zinc-400"
               }`}
             >
@@ -90,7 +108,8 @@ export default function Navbar() {
               {/* Pro: приобрести или продлить */}
               <Link
                 href="/pro-payment"
-                className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all duration-300 hover:-translate-y-0.5 ${
+                className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                  // duration по умолчанию 150ms: цвет меняется быстро, без «плавающих» сдвигов
                   me.isPro
                     ? "border-amber-300/40 bg-amber-300/10 text-amber-200 hover:bg-amber-300/20"
                     : "border-amber-300/40 bg-gradient-to-r from-amber-400/20 to-orange-400/20 text-amber-200 hover:from-amber-400/30 hover:to-orange-400/30"
@@ -101,7 +120,9 @@ export default function Navbar() {
               <div className="relative">
               <button
                 onClick={() => setMenu(!menu)}
-                className="flex items-center gap-2 rounded-full border border-white/10 py-1 pl-1 pr-3 transition-colors hover:bg-white/5"
+                aria-haspopup="menu"
+                aria-expanded={menu}
+                className="flex items-center gap-2 rounded-full border border-white/10 py-1 pl-1 pr-3 transition-transform active:scale-[0.97] hover:bg-white/5"
               >
                 <Avatar me={me} size={30} />
                 <span className="max-w-[140px] truncate text-sm font-medium text-white">
@@ -110,10 +131,11 @@ export default function Navbar() {
               </button>
               {menu && (
                 <div
-                  className="absolute right-0 mt-2 w-52 overflow-hidden rounded-xl border border-white/10 bg-[#111318] py-1 shadow-xl"
-                  onMouseLeave={() => setMenu(false)}
+                  ref={menuRef}
+                  role="menu"
+                  className="dropdown absolute right-0 mt-2 w-52 overflow-hidden rounded-xl border border-white/10 bg-[#111318] py-1 shadow-xl"
                 >
-                  <Link href="/cabinet" onClick={() => setMenu(false)} className="block px-4 py-2.5 text-sm text-zinc-300 hover:bg-white/5 hover:text-white">
+                  <Link role="menuitem" href="/cabinet" onClick={() => setMenu(false)} className="block px-4 py-2.5 text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-white">
                     Личный кабинет
                   </Link>
                   {me.username && (
@@ -132,7 +154,7 @@ export default function Navbar() {
                       Админка
                     </Link>
                   )}
-                  <button onClick={logout} className="block w-full px-4 py-2.5 text-left text-sm text-red-400 hover:bg-white/5">
+                  <button role="menuitem" onClick={logout} className="block w-full px-4 py-2.5 text-left text-sm text-red-400 transition-colors hover:bg-white/5">
                     Выйти
                   </button>
                 </div>

@@ -7,6 +7,22 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* ============================================================
+   Дизайн-токены (по скиллу emil-design-eng):
+   — кривые: ease-out для входов, ease-in-out для движения на экране,
+     ease для hover/цвета, linear для постоянного движения.
+   — длительности: UI-анимации строго < 300ms.
+   ============================================================ */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-slow: 280ms;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -35,6 +51,14 @@ code {
   overflow-wrap: anywhere;
 }
 
+/* ---------- Доступность: клавиатурная навигация (скилл frontend-ui-engineering) ---------- */
+/* Фокус всегда видим, но рисуем его только для клавиатуры — мышиной клик не рисует кольцо */
+:focus-visible {
+  outline: 2px solid rgba(163, 230, 53, 0.8);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 /* ---------- Мобильная версия: спокойнее и плавнее ---------- */
 @media (max-width: 640px) {
   body {
@@ -57,15 +81,34 @@ code {
   }
 }
 
-/* Уважаем настройку «меньше движения» */
+/* ---------- Гейт ховера: на тач-устройствах hover-анимаций нет ---------- */
+/* (скилл emil-design-eng: тач вызывает hover на тапе — запрещаем ложные срабатывания) */
+@media (hover: none) {
+  .card:hover,
+  .btn:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+/* Уважаем настройку «меньше движения»: убираем перемещения, оставяем прозрачность */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
-  .reveal {
+  .reveal,
+  .stagger-item {
     transition: none !important;
+    animation: none !important;
     opacity: 1 !important;
     transform: none !important;
+  }
+  .btn,
+  .card,
+  .nav-link,
+  .btn-ghost,
+  .btn-primary {
+    transition-duration: 1ms !important;
   }
 }
 
@@ -86,20 +129,20 @@ code {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* ---------- Анимации появления при скролле ---------- */
+/* ---------- Появление при скролле (interruptible: transition, не keyframes) ---------- */
 /* Прячем только когда JS точно работает (класс js ставит инлайн-скрипт),
    чтобы контент никогда не оставался невидимым при медленной загрузке */
 html.js .reveal {
   opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.7s ease, transform 0.7s ease;
+  transform: translateY(16px);
+  transition: opacity 0.28s var(--ease-out), transform 0.28s var(--ease-out);
 }
 html.js .reveal.is-visible {
   opacity: 1;
   transform: none;
 }
 
-/* ---------- Кнопки с анимациями ---------- */
+/* ---------- Кнопки: отзывчивость на press + мгновенная обратная связь ---------- */
 .btn {
   position: relative;
   display: inline-flex;
@@ -110,10 +153,12 @@ html.js .reveal.is-visible {
   padding: 12px 24px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease,
-    background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out),
+    background-color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out);
   will-change: transform;
 }
+/* Нажатие всегда должно отзываться — интерфейс «слушает» пользователя (emil-design-eng) */
 .btn:active {
   transform: scale(0.97);
 }
@@ -134,7 +179,7 @@ html.js .reveal.is-visible {
   box-shadow: 0 8px 24px -8px rgba(99, 102, 241, 0.55);
 }
 .btn-primary:hover {
-  transform: translateY(-2px) scale(1.02);
+  transform: translateY(-1px);
   box-shadow: 0 14px 32px -8px rgba(139, 92, 246, 0.65);
 }
 .btn-ghost {
@@ -147,23 +192,26 @@ html.js .reveal.is-visible {
   background: rgba(255, 255, 255, 0.09);
   border-color: rgba(163, 230, 53, 0.5);
   color: #fff;
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
-/* ---------- Карточки с hover-подъёмом и подсветкой ---------- */
+/* ---------- Карточки: подъём только на десктопе (hover:hover) ---------- */
 .card {
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(12px);
-  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease,
-    background-color 0.3s ease;
+  transition: transform var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out), background-color var(--dur-base) var(--ease-out);
 }
-.card:hover {
-  transform: translateY(-5px);
-  border-color: rgba(99, 102, 241, 0.45);
-  box-shadow: 0 20px 40px -18px rgba(99, 102, 241, 0.35);
-  background: rgba(255, 255, 255, 0.05);
+/* Подъём и подсветка — только там, где ховер настоящий (мышь) */
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(99, 102, 241, 0.45);
+    box-shadow: 0 20px 40px -18px rgba(99, 102, 241, 0.35);
+    background: rgba(255, 255, 255, 0.05);
+  }
 }
 
 /* На телефоне карточки неподвижны (без подъёма при тапе) и чуть компактнее */
@@ -202,9 +250,34 @@ html.js .reveal.is-visible {
   }
 }
 
-/* ---------- Мобильное меню: плавное раскрытие ---------- */
+/* ---------- Навигация: ссылка с движением только цвета (без прыжков) ---------- */
+.nav-link {
+  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+.nav-link:active {
+  transform: scale(0.97);
+}
+
+/* ---------- Дропдаун меню: origin-aware (emil-design-eng) ---------- */
+/* Раскрывается от триггера (правый верхний угол якоря), не из центра экрана */
+.dropdown {
+  transform-origin: top right;
+  animation: dropdown-in var(--dur-base) var(--ease-out) both;
+}
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- Мобильное меню: плавное раскрытие сверху ---------- */
 .mobile-menu {
-  animation: menu-slide 0.25s ease both;
+  animation: menu-slide var(--dur-base) var(--ease-out) both;
 }
 @keyframes menu-slide {
   from {
@@ -217,9 +290,9 @@ html.js .reveal.is-visible {
   }
 }
 
-/* ---------- Модалки: плавное появление ---------- */
+/* ---------- Модалки: оверлей быстро, панель — из scale(0.95), не из нуля ---------- */
 .modal-overlay {
-  animation: fade-in 0.2s ease both;
+  animation: fade-in var(--dur-fast) var(--ease-out) both;
 }
 @keyframes fade-in {
   from {
@@ -230,15 +303,39 @@ html.js .reveal.is-visible {
   }
 }
 .modal-panel {
-  animation: modal-pop 0.25s cubic-bezier(0.34, 1.3, 0.64, 1) both;
+  animation: modal-pop var(--dur-slow) var(--ease-out) both;
 }
 @keyframes modal-pop {
   from {
     opacity: 0;
-    transform: scale(0.96) translateY(10px);
+    transform: scale(0.95) translateY(8px);
   }
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* ---------- Stagger: каскадное появление списков (30–80ms между элементами) ---------- */
+/* Декоративная анимация: взаимодействие она никогда не блокирует */
+.stagger-item {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: stagger-in 0.3s var(--ease-out) forwards;
+}
+@keyframes stagger-in {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- Уважение reduced-motion для анимационных классов ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .dropdown,
+  .mobile-menu,
+  .modal-overlay,
+  .modal-panel {
+    animation-duration: 1ms !important;
   }
 }

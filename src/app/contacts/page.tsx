@@ -22,10 +22,10 @@ export default function ContactsPage() {
         rel="noopener noreferrer"
         className="card reveal group relative mt-10 block overflow-hidden p-8 hover:!border-sky-400/60"
       >
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-sky-500/20 to-sky-500/5 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-sky-500/20 to-sky-500/5 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
         <div className="relative flex items-center justify-between">
-          <span className="text-5xl transition-transform duration-500 group-hover:scale-125 group-hover:-rotate-6">✈️</span>
-          <span className="text-sm text-zinc-500 transition-all duration-300 group-hover:translate-x-1 group-hover:text-zinc-300">→</span>
+          <span className="text-5xl transition-transform duration-200 ease-out group-hover:scale-110 group-hover:-rotate-6">✈️</span>
+          <span className="text-sm text-zinc-500 transition-colors group-hover:text-zinc-300">→</span>
         </div>
         <h2 className="relative mt-4 text-2xl font-bold text-white">Telegram</h2>
         <p className="relative mt-1 text-sm text-zinc-400">@kollew — предложения, реклама, поддержка, споры по оценкам</p>
