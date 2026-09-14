@@ -12,7 +12,8 @@ const TG_LINK = "https://t.me/kollew";
 export default function ProPaymentPage() {
   return (
     <section className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
-      <h1 className="text-2xl font-extrabold text-white sm:text-3xl">Оформление Pro</h1>
+      <p className="eyebrow">DevShelf Pro · Подписка</p>
+      <h1 className="mt-3 text-2xl font-extrabold text-white sm:text-3xl">Оформление Pro</h1>
       <p className="mt-1 text-sm text-zinc-400">
         Pro снимает лимит 5 работ — публикуйте без ограничений. {PRO_PRICE_LABEL}.
       </p>

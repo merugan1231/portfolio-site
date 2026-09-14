@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getPortfolio } from "@/lib/storage";
 import type { Project } from "@/lib/portfolio";
 import PageBanner from "@/components/PageBanner";
+import PhotoStrip from "@/components/PhotoStrip";
 
 export const metadata: Metadata = { title: "Лучшие работы наших пользователей" };
 export const dynamic = "force-dynamic";
@@ -119,6 +120,13 @@ export default async function ProjectsPage() {
       {projects.length === 0 && (
         <p className="mt-14 text-zinc-500">Витрина пока пуста — работы появятся совсем скоро.</p>
       )}
+
+      {/* Фото-полоса в ритме раздела */}
+      <PhotoStrip
+        photo="https://images.unsplash.com/photo-1461749280684-dccba630e2f6?q=80&w=1600&auto=format&fit=crop"
+        alt="Код на экране"
+        caption="Made by the community · Сделано сообществом"
+      />
 
       {/* Финал витрины */}
       <div className="card reveal mt-12 flex flex-col items-center gap-4 p-7 text-center sm:mt-16 sm:p-10">

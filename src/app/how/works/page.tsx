@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import PhotoStrip from "@/components/PhotoStrip";
 
 import { HOW_LINKS } from "../links";
 
@@ -10,13 +11,14 @@ export const metadata: Metadata = {
 
 export default function HowWorksPage() {
   return (
+    <>
     <section className="relative mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6 sm:py-16">
       <div className="glow left-[-80px] top-[-60px] h-72 w-72 bg-violet-500" />
       <Link href="/" className="relative text-sm text-zinc-500 transition-colors hover:text-zinc-300">
         ← На главную
       </Link>
 
-      <p className="relative mt-8 text-xs uppercase tracking-[0.3em] text-lime-300">Как это работает · шаг 2</p>
+      <p className="relative mt-8 text-xs uppercase tracking-[0.3em] text-lime-300 eyebrow">How it works · шаг 2</p>
       <h1 className="relative mt-3 flex items-center gap-3 text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
         <span>🗂️</span> Работы
       </h1>
@@ -63,5 +65,12 @@ export default function HowWorksPage() {
         </div>
       </div>
     </section>
+
+    <PhotoStrip
+      photo="https://images.unsplash.com/photo-1517180102446-f3ece451e9d8?q=80&w=1600&auto=format&fit=crop"
+      alt="Рабочее место с кодом"
+      caption="Tell the whole story · Расскажи всю историю"
+    />
+    </>
   );
 }

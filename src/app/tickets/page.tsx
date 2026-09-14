@@ -100,7 +100,8 @@ export default function TicketsPage() {
 
   return (
     <section className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
-      <h1 className="text-2xl font-extrabold text-white sm:text-3xl">Тикеты</h1>
+      <p className="eyebrow">Support · Поддержка</p>
+      <h1 className="mt-3 text-2xl font-extrabold text-white sm:text-3xl">Тикеты</h1>
       <p className="mt-1 text-sm text-zinc-400">
         Обращения к администрации: оспаривание модерации, вопросы, жалобы. Ответ появится здесь же.
       </p>

@@ -2,9 +2,10 @@ import type { ReactNode } from "react";
 import HeroParallax from "@/components/HeroParallax";
 
 /**
- * Фото-баннер раздела: атмосферное фото + ken-burns + параллакс,
- * двойное затемнение — текст под ним всегда читается.
- * Подписи разделов на английском (заголовок) + русский подзаголовок.
+ * Фото-баннер раздела: атмосферное фото + параллакс, двойное затемнение —
+ * текст под ним всегда читается. Ken-burns здесь отключён (.static):
+ * бесконечная анимация на внутренних страницах ест GPU и вызывает лаги.
+ * Подписи разделов: английский надзаголовок + русский контент.
  */
 export default function PageBanner({
   photo,
@@ -20,9 +21,9 @@ export default function PageBanner({
   return (
     <section className="relative overflow-hidden">
       <HeroParallax>
-        <div className="hero-photo">
+        <div className="hero-photo static">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={photo} alt="" fetchPriority="high" />
+          <img src={photo} alt="" fetchPriority="high" decoding="async" />
         </div>
       </HeroParallax>
       {/* Дополнительное затемнение: баннер короче hero, поэтому усиливаем шторки */}

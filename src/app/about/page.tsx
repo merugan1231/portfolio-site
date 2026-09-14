@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import PageBanner from "@/components/PageBanner";
+import PhotoStrip from "@/components/PhotoStrip";
 
 export const metadata: Metadata = { title: "О сервисе" };
 
@@ -87,6 +88,13 @@ export default function AboutPage() {
         </Link>
       </div>
     </section>
+
+    {/* Фото-полоса перед финалом страницы */}
+    <PhotoStrip
+      photo="https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=1600&auto=format&fit=crop"
+      alt="Рабочее место разработчика"
+      caption="Build · Verify · Share · Публикуй · Подтверждай · Делись"
+    />
     </>
   );
 }

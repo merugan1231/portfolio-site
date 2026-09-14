@@ -202,10 +202,10 @@ html.js .reveal.is-visible {
 }
 
 .btn-ghost {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #e4e4e7;
-  backdrop-filter: blur(8px);
+  /* backdrop-filter убран: на списках карточек он вызывает лаги при скролле */
 }
 .btn-ghost:hover {
   background: rgba(255, 255, 255, 0.09);
@@ -219,8 +219,9 @@ html.js .reveal.is-visible {
   position: relative;
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(12px);
+  /* Полупрозрачный фон вместо blur: backdrop-filter на десятках карточек
+     заставляет GPU пересчитывать размытие в каждом кадре скролла — главный источник лагов витрины */
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
   transition: transform var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out),
     box-shadow var(--dur-base) var(--ease-out), background-color var(--dur-base) var(--ease-out);
 }
@@ -403,6 +404,12 @@ html.js .reveal.is-visible {
   object-fit: cover;
   animation: ken-burns 26s var(--ease-in-out) infinite alternate;
   will-change: transform;
+}
+/* Внутренним баннерам зум не нужен: бесконечная анимация на большом слое
+   ест GPU/батарею. Статичное фото + только параллакс от скролла */
+.hero-photo.static img {
+  animation: none;
+  will-change: auto;
 }
 @keyframes ken-burns {
   from {

@@ -126,7 +126,8 @@ function RegisterInner() {
       <div className="card relative w-full max-w-md p-6 sm:p-8">
         {step === "form" ? (
           <>
-            <h1 className="text-3xl font-extrabold text-white">Регистрация</h1>
+            <p className="eyebrow">Join DevShelf · Регистрация</p>
+            <h1 className="mt-3 text-3xl font-extrabold text-white">Создайте аккаунт</h1>
             <p className="mt-2 text-sm text-zinc-400">
               Выберите быстрый способ или создайте аккаунт по email. Юзернейм выберете сразу после — он закрепляется один раз.
             </p>
