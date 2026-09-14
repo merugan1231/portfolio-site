@@ -79,8 +79,8 @@ export default function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0b0c10]/85 backdrop-blur">
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-30 px-3 pt-3 sm:px-6 sm:pt-4">
+      <div className="pointer-events-auto mx-auto flex h-14 w-full max-w-5xl items-center justify-between rounded-2xl border border-white/10 bg-[#0b0c10]/70 px-3 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.6)] backdrop-blur-xl sm:px-5">
         <Link href="/" onClick={() => setOpen(false)} className="text-lg font-extrabold tracking-tight text-white">
           Dev<span className="gradient-text">Shelf</span>
         </Link>
@@ -179,7 +179,7 @@ export default function Navbar() {
 
       {/* Мобильное меню */}
       {open && (
-        <nav className="mobile-menu max-h-[calc(100dvh-64px)] overflow-y-auto border-t border-white/10 bg-[#0b0c10]/95 px-6 pb-8 pt-4 backdrop-blur lg:hidden">
+        <nav className="mobile-menu pointer-events-auto mt-2 max-h-[calc(100dvh-88px)] overflow-y-auto rounded-2xl border border-white/10 bg-[#0b0c10]/95 px-4 pb-8 pt-4 backdrop-blur-xl lg:hidden">
           <div className="flex flex-col gap-1">
             {LINKS.map((l) => (
               <Link

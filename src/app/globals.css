@@ -8,10 +8,9 @@
 }
 
 /* ============================================================
-   Дизайн-токены (по скиллу emil-design-eng):
-   — кривые: ease-out для входов, ease-in-out для движения на экране,
-     ease для hover/цвета, linear для постоянного движения.
-   — длительности: UI-анимации строго < 300ms.
+   Дизайн-система DevShelf v2 («Aurora»)
+   — кривые: ease-out для входов, ease-in-out для движения, ease для цвета
+   — длительности: UI-анимации < 300ms
    ============================================================ */
 :root {
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
@@ -28,18 +27,16 @@ html {
 }
 
 body {
-  /* Многослойная тёмная гамма: графит + индиго + лайм-акцент.
-     Фон приклеен к вьюпорту (fixed) — при скролле на телефоне не «плавает» и не дёргается. */
+  /* Аврора-подложка: три цветных пятна + виньетка поверх графита */
   background:
-    radial-gradient(1200px 600px at 85% -10%, rgba(99, 102, 241, 0.14), transparent 60%),
-    radial-gradient(900px 500px at -10% 30%, rgba(163, 230, 53, 0.07), transparent 55%),
+    radial-gradient(1100px 520px at 85% -10%, rgba(99, 102, 241, 0.16), transparent 60%),
+    radial-gradient(800px 460px at -12% 28%, rgba(163, 230, 53, 0.07), transparent 55%),
+    radial-gradient(900px 500px at 55% 115%, rgba(139, 92, 246, 0.1), transparent 60%),
     #0b0c10;
   background-attachment: fixed;
   color: #f4f4f5;
-  /* Резкие смены фона запрещены: базовый цвет по всему сайту единый. */
 }
 
-/* Никаких горизонтальных прыжков на телефоне: длинные слова и коды переносим */
 html,
 body {
   overflow-x: hidden;
@@ -51,38 +48,42 @@ code {
   overflow-wrap: anywhere;
 }
 
-/* ---------- Доступность: клавиатурная навигация (скилл frontend-ui-engineering) ---------- */
-/* Фокус всегда видим, но рисуем его только для клавиатуры — мышиной клик не рисует кольцо */
+/* ---------- Доступность: клавиатурный фокус ---------- */
 :focus-visible {
   outline: 2px solid rgba(163, 230, 53, 0.8);
   outline-offset: 2px;
   border-radius: 6px;
 }
 
-/* ---------- Мобильная версия: спокойнее и плавнее ---------- */
+/* ---------- Декоративная сетка (background-image, не DOM) ---------- */
+.grid-bg {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+  /* К сетке примыкает мягкая маска, чтобы она растворялась к низу */
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 55%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 0%, black 55%, transparent 100%);
+}
+
+/* ---------- Мобильная версия ---------- */
 @media (max-width: 640px) {
   body {
-    /* Свечения мягче и ближе к верху — без резких цветовых пятен на маленьком экране */
     background:
-      radial-gradient(560px 340px at 50% -8%, rgba(99, 102, 241, 0.1), transparent 62%),
-      radial-gradient(420px 260px at 100% 22%, rgba(163, 230, 53, 0.04), transparent 58%),
+      radial-gradient(560px 340px at 50% -8%, rgba(99, 102, 241, 0.12), transparent 62%),
+      radial-gradient(420px 260px at 100% 22%, rgba(163, 230, 53, 0.05), transparent 58%),
       #0b0c10;
     background-attachment: fixed;
   }
-
-  /* Единая комфортная высота секций — «воздух» вместо огромных пустот */
   section {
-    scroll-margin-top: 64px;
+    scroll-margin-top: 88px;
   }
-
-  /* Плавный скролл без отдачи на iOS */
   * {
     -webkit-tap-highlight-color: transparent;
   }
 }
 
-/* ---------- Гейт ховера: на тач-устройствах hover-анимаций нет ---------- */
-/* (скилл emil-design-eng: тач вызывает hover на тапе — запрещаем ложные срабатывания) */
+/* ---------- Гейт ховера: на тач-устройствах подъёмов нет ---------- */
 @media (hover: none) {
   .card:hover,
   .btn:hover {
@@ -91,7 +92,7 @@ code {
   }
 }
 
-/* Уважаем настройку «меньше движения»: убираем перемещения, оставяем прозрачность */
+/* ---------- Reduced motion: без перемещений ---------- */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -110,9 +111,15 @@ code {
   .btn-primary {
     transition-duration: 1ms !important;
   }
+  .dropdown,
+  .mobile-menu,
+  .modal-overlay,
+  .modal-panel {
+    animation-duration: 1ms !important;
+  }
 }
 
-/* Красивый скроллбар (WebKit) — не ломает мобильную вёрстку, украшает десктоп */
+/* ---------- Скроллбар ---------- */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -129,9 +136,7 @@ code {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* ---------- Появление при скролле (interruptible: transition, не keyframes) ---------- */
-/* Прячем только когда JS точно работает (класс js ставит инлайн-скрипт),
-   чтобы контент никогда не оставался невидимым при медленной загрузке */
+/* ---------- Появление при скролле (interruptible) ---------- */
 html.js .reveal {
   opacity: 0;
   transform: translateY(16px);
@@ -142,7 +147,7 @@ html.js .reveal.is-visible {
   transform: none;
 }
 
-/* ---------- Кнопки: отзывчивость на press + мгновенная обратная связь ---------- */
+/* ---------- Кнопки: press-отклик + блик ---------- */
 .btn {
   position: relative;
   display: inline-flex;
@@ -153,17 +158,16 @@ html.js .reveal.is-visible {
   padding: 12px 24px;
   font-weight: 600;
   cursor: pointer;
+  overflow: hidden;
   transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out),
     background-color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out),
     color var(--dur-base) var(--ease-out);
   will-change: transform;
 }
-/* Нажатие всегда должно отзываться — интерфейс «слушает» пользователя (emil-design-eng) */
 .btn:active {
   transform: scale(0.97);
 }
 
-/* На телефоне: удобные тап-зоны, без «прыгающих» ховер-эффектов */
 @media (max-width: 640px) {
   .btn {
     padding: 13px 20px;
@@ -173,15 +177,30 @@ html.js .reveal.is-visible {
     transform: none;
   }
 }
+
 .btn-primary {
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   color: #fff;
   box-shadow: 0 8px 24px -8px rgba(99, 102, 241, 0.55);
 }
+/* Блик — псевдоэлементом, движется только он (GPU) */
+.btn-primary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.22) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.6s var(--ease-out);
+  pointer-events: none;
+}
+.btn-primary:hover::before {
+  transform: translateX(120%);
+}
 .btn-primary:hover {
   transform: translateY(-1px);
   box-shadow: 0 14px 32px -8px rgba(139, 92, 246, 0.65);
 }
+
 .btn-ghost {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -195,8 +214,9 @@ html.js .reveal.is-visible {
   transform: translateY(-1px);
 }
 
-/* ---------- Карточки: подъём только на десктопе (hover:hover) ---------- */
+/* ---------- Карточка: стеклянная, с верхней подсветкой ---------- */
 .card {
+  position: relative;
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);
@@ -204,7 +224,17 @@ html.js .reveal.is-visible {
   transition: transform var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out),
     box-shadow var(--dur-base) var(--ease-out), background-color var(--dur-base) var(--ease-out);
 }
-/* Подъём и подсветка — только там, где ховер настоящий (мышь) */
+/* Верхняя подсветка-хайрлайн */
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  pointer-events: none;
+}
 @media (hover: hover) and (pointer: fine) {
   .card:hover {
     transform: translateY(-4px);
@@ -213,8 +243,6 @@ html.js .reveal.is-visible {
     background: rgba(255, 255, 255, 0.05);
   }
 }
-
-/* На телефоне карточки неподвижны (без подъёма при тапе) и чуть компактнее */
 @media (max-width: 640px) {
   .card {
     border-radius: 16px;
@@ -225,7 +253,23 @@ html.js .reveal.is-visible {
   }
 }
 
-/* ---------- Градиентный текст ---------- */
+/* Свечение, следующее за курсором (--mx/--my ставит CardGlow) */
+.card-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-out);
+  background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgba(129, 140, 248, 0.14), transparent 65%);
+  pointer-events: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .card:hover .card-glow {
+    opacity: 1;
+  }
+}
+
+/* ---------- Типографика ---------- */
 .gradient-text {
   background: linear-gradient(90deg, #a5b4fc 0%, #c084fc 50%, #bef264 100%);
   background-clip: text;
@@ -233,7 +277,36 @@ html.js .reveal.is-visible {
   color: transparent;
 }
 
-/* ---------- Мягкое свечение под hero ---------- */
+.text-glow {
+  text-shadow: 0 0 28px rgba(165, 180, 252, 0.35);
+}
+
+/* Надзаголовок секции */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #a5b4fc;
+}
+.eyebrow::before {
+  content: "";
+  width: 22px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #a5b4fc);
+}
+
+/* Тонкий градиентный разделитель секций (вместо border-white/10) */
+.hairline {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+}
+
+/* ---------- Свечение под hero ---------- */
 .glow {
   position: absolute;
   border-radius: 9999px;
@@ -241,8 +314,6 @@ html.js .reveal.is-visible {
   opacity: 0.25;
   pointer-events: none;
 }
-
-/* На мобильных свечение почти незаметное — без резких цветовых пятен */
 @media (max-width: 640px) {
   .glow {
     filter: blur(70px);
@@ -250,7 +321,7 @@ html.js .reveal.is-visible {
   }
 }
 
-/* ---------- Навигация: ссылка с движением только цвета (без прыжков) ---------- */
+/* ---------- Навигация ---------- */
 .nav-link {
   transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
 }
@@ -258,8 +329,7 @@ html.js .reveal.is-visible {
   transform: scale(0.97);
 }
 
-/* ---------- Дропдаун меню: origin-aware (emil-design-eng) ---------- */
-/* Раскрывается от триггера (правый верхний угол якоря), не из центра экрана */
+/* ---------- Дропдаун: origin-aware ---------- */
 .dropdown {
   transform-origin: top right;
   animation: dropdown-in var(--dur-base) var(--ease-out) both;
@@ -275,7 +345,7 @@ html.js .reveal.is-visible {
   }
 }
 
-/* ---------- Мобильное меню: плавное раскрытие сверху ---------- */
+/* ---------- Мобильное меню ---------- */
 .mobile-menu {
   animation: menu-slide var(--dur-base) var(--ease-out) both;
 }
@@ -290,7 +360,7 @@ html.js .reveal.is-visible {
   }
 }
 
-/* ---------- Модалки: оверлей быстро, панель — из scale(0.95), не из нуля ---------- */
+/* ---------- Модалки ---------- */
 .modal-overlay {
   animation: fade-in var(--dur-fast) var(--ease-out) both;
 }
@@ -316,8 +386,7 @@ html.js .reveal.is-visible {
   }
 }
 
-/* ---------- Stagger: каскадное появление списков (30–80ms между элементами) ---------- */
-/* Декоративная анимация: взаимодействие она никогда не блокирует */
+/* ---------- Stagger каскад ---------- */
 .stagger-item {
   opacity: 0;
   transform: translateY(10px);
@@ -327,15 +396,5 @@ html.js .reveal.is-visible {
   to {
     opacity: 1;
     transform: none;
-  }
-}
-
-/* ---------- Уважение reduced-motion для анимационных классов ---------- */
-@media (prefers-reduced-motion: reduce) {
-  .dropdown,
-  .mobile-menu,
-  .modal-overlay,
-  .modal-panel {
-    animation-duration: 1ms !important;
   }
 }

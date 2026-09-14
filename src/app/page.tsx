@@ -5,6 +5,7 @@ import type { StoredUser } from "@/lib/storage";
 import { getCurrentUser } from "@/lib/current-user";
 import { AudienceSection } from "@/components/AudienceSection";
 import LiveStats from "@/components/LiveStats";
+import CardGlow from "@/components/CardGlow";
 import { ensureDemoVolume, listDemoShelf } from "@/lib/demo-works";
 
 export const dynamic = "force-dynamic";
@@ -118,13 +119,22 @@ export default async function Home({
 
       {/* Герой */}
       <section className="relative overflow-hidden">
+        {/* Декоративная сетка, растворяющаяся к низу */}
+        <div aria-hidden className="grid-bg absolute inset-0" />
         <div className="glow left-1/2 top-[-120px] h-[420px] w-[420px] -translate-x-1/2 bg-indigo-500" />
-        <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-5 px-4 py-14 text-center sm:gap-6 sm:px-6 sm:py-24 lg:py-32">
-          <span className="stagger-item rounded-full border border-lime-300/30 bg-lime-300/10 px-4 py-1.5 text-xs text-lime-200 sm:text-sm" style={{ animationDelay: "0ms" }}>
+        <div className="relative mx-auto flex w-full max-w-6xl flex-col items-center gap-5 px-4 pb-16 pt-28 text-center sm:gap-6 sm:px-6 sm:pb-24 sm:pt-36 lg:pb-28 lg:pt-44">
+          <span
+            className="stagger-item inline-flex items-center gap-2 rounded-full border border-lime-300/30 bg-lime-300/10 px-4 py-1.5 text-xs text-lime-200 sm:text-sm"
+            style={{ animationDelay: "0ms" }}
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-lime-300 opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-lime-300" />
+            </span>
             Полка работ разработчиков и креаторов
           </span>
           <h1
-            className="stagger-item max-w-3xl text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl"
+            className="stagger-item text-glow max-w-4xl text-4xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-6xl lg:text-7xl"
             style={{ animationDelay: "60ms" }}
           >
             Покажи, <span className="gradient-text">как ты это сделал</span>
@@ -147,6 +157,21 @@ export default async function Home({
               Найти специалиста
             </Link>
           </div>
+          {/* Чипы доверия */}
+          <div
+            className="stagger-item mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-zinc-500 sm:text-sm"
+            style={{ animationDelay: "240ms" }}
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <span aria-hidden>🛡️</span> Авторство подтверждается автоматически
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span aria-hidden>⭐</span> Честные оценки со спорами
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span aria-hidden>🆔</span> Постоянный цифровой ID
+            </span>
+          </div>
 
           {/* Цифры сервиса — «живые», слегка меняются каждые несколько секунд */}
           <LiveStats base={stats} />
@@ -154,10 +179,12 @@ export default async function Home({
       </section>
 
       {/* Как это работает */}
-      <section className="border-t border-white/10 bg-white/[0.02] py-14 sm:py-20">
+      <hr className="hairline mx-auto w-full max-w-5xl" aria-hidden />
+      <section className="py-14 sm:py-20">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
-          <h2 className="reveal text-center text-2xl font-bold tracking-tight text-white sm:text-4xl">
-            Как это работает
+          <p className="reveal eyebrow justify-center">Как это работает</p>
+          <h2 className="reveal mt-3 text-center text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            Четыре шага до <span className="gradient-text">подтверждённого</span> портфолио
           </h2>
           <div className="mt-8 grid gap-4 sm:mt-10 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
             {            [
@@ -172,6 +199,7 @@ export default async function Home({
                 className="card reveal group block p-6 hover:!border-lime-300/40"
                 style={{ transitionDelay: `${i * 80}ms` }}
               >
+                <CardGlow />
                 <span className="text-3xl">{f.icon}</span>
                 <h3 className="mt-3 text-lg font-semibold text-white">{f.title}</h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">{f.text}</p>
@@ -185,11 +213,13 @@ export default async function Home({
       </section>
 
       {/* Живая полка — свежие подтверждённые работы */}
-      <section className="border-t border-white/10 py-14 sm:py-20">
+      <hr className="hairline mx-auto w-full max-w-5xl" aria-hidden />
+      <section className="py-14 sm:py-20">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
           <div className="reveal flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight text-white sm:text-4xl">
+              <p className="eyebrow">Витрина</p>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
                 Живая полка
               </h2>
               <p className="mt-3 max-w-xl text-sm text-zinc-400 sm:text-base">
@@ -218,6 +248,7 @@ export default async function Home({
               {shelfItems.map((item, i) => (
                 <div key={item.id} className="reveal" style={{ transitionDelay: `${i * 60}ms` }}>
                   <div className="card flex h-full flex-col p-5">
+                    <CardGlow />
                     <div className="flex items-center justify-between gap-2">
                       <span className="rounded-full border border-white/10 px-2.5 py-0.5 text-xs text-zinc-400">
                         {item.typeLabel}
@@ -247,7 +278,8 @@ export default async function Home({
       <AudienceSection />
 
       {/* CTA */}
-      <section className="border-t border-white/10 py-14 sm:py-20">
+      <hr className="hairline mx-auto w-full max-w-5xl" aria-hidden />
+      <section className="py-14 sm:py-20">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
           <div className="card reveal relative flex flex-col items-center gap-5 overflow-hidden p-7 text-center sm:gap-6 sm:p-10">
             <div className="glow left-1/2 top-0 h-64 w-64 -translate-x-1/2 -translate-y-1/2 bg-violet-500" />
