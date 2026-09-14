@@ -6,7 +6,29 @@ import { getCurrentUser } from "@/lib/current-user";
 import { AudienceSection } from "@/components/AudienceSection";
 import LiveStats from "@/components/LiveStats";
 import CardGlow from "@/components/CardGlow";
+import HeroParallax from "@/components/HeroParallax";
 import { ensureDemoVolume, listDemoShelf } from "@/lib/demo-works";
+
+/* Unsplash-фотографии (Pinterest-эстетика: тёмные, атмосферные, «код и творчество») */
+const HERO_PHOTOS = [
+  "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=2400&auto=format&fit=crop", // код на экране
+  "https://images.unsplash.com/photo-1517180102446-f3ece451e9d8?q=80&w=2400&auto=format&fit=crop", // десктоп разработчика
+  "https://images.unsplash.com/photo-1542831371-29b0f74f9713?q=80&w=2400&auto=format&fit=crop", // код крупно
+];
+const GALLERY_PHOTOS = [
+  { url: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?q=80&w=1200&auto=format&fit=crop", h: "h-72", title: "Веб-разработка", meta: "Сайты и приложения" },
+  { url: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=1200&auto=format&fit=crop", h: "h-52", title: "OSINT-расследования", meta: "Кейсы и анализ" },
+  { url: "https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=1200&auto=format&fit=crop", h: "h-64", title: "Дизайн", meta: "UI/UX и иллюстрации" },
+  { url: "https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?q=80&w=1200&auto=format&fit=crop", h: "h-56", title: "Telegram-боты", meta: "Автоматизация" },
+  { url: "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1200&auto=format&fit=crop", h: "h-72", title: "Дашборды", meta: "Данные и метрики" },
+  { url: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1200&auto=format&fit=crop", h: "h-52", title: "Скрипты", meta: "Автоматизация рутины" },
+  { url: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1200&auto=format&fit=crop", h: "h-64", title: "Кибербезопасность", meta: "Защита и аудит" },
+  { url: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1200&auto=format&fit=crop", h: "h-56", title: "Мобильные приложения", meta: "iOS и Android" },
+];
+const MARQUEE_ITEMS = [
+  "🛡️ Авторство подтверждено", "💻 12 ролей", "⭐ Честные оценки", "🆔 Цифровой ID",
+  "🤖 Telegram-боты", "🔍 OSINT-кейсы", "🎨 Дизайн", "📊 Дашборды", "🌐 Веб-разработка", "🚀 Pro без лимитов",
+];
 
 export const dynamic = "force-dynamic";
 
@@ -117,12 +139,24 @@ export default async function Home({
         </div>
       ) : null}
 
-      {/* Герой */}
+      {/* Герой с фото-фоном и параллаксом */}
       <section className="relative overflow-hidden">
-        {/* Декоративная сетка, растворяющаяся к низу */}
-        <div aria-hidden className="grid-bg absolute inset-0" />
-        <div className="glow left-1/2 top-[-120px] h-[420px] w-[420px] -translate-x-1/2 bg-indigo-500" />
-        <div className="relative mx-auto flex w-full max-w-6xl flex-col items-center gap-5 px-4 pb-16 pt-28 text-center sm:gap-6 sm:px-6 sm:pb-24 sm:pt-36 lg:pb-28 lg:pt-44">
+        <HeroParallax>
+          <div className="hero-photo">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={HERO_PHOTOS[0]}
+              alt=""
+              fetchPriority="high"
+              onError={(e) => {
+                const img = e.currentTarget;
+                const i = HERO_PHOTOS.indexOf(img.src);
+                if (i >= 0 && i < HERO_PHOTOS.length - 1) img.src = HERO_PHOTOS[i + 1];
+              }}
+            />
+          </div>
+        </HeroParallax>
+        <div className="relative mx-auto flex w-full max-w-6xl flex-col items-center gap-5 px-4 pb-16 pt-32 text-center sm:gap-6 sm:px-6 sm:pb-24 sm:pt-40 lg:pb-28 lg:pt-48">
           <span
             className="stagger-item inline-flex items-center gap-2 rounded-full border border-lime-300/30 bg-lime-300/10 px-4 py-1.5 text-xs text-lime-200 sm:text-sm"
             style={{ animationDelay: "0ms" }}
@@ -271,6 +305,53 @@ export default async function Home({
               ))}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Marquee-лента категорий (пауза на hover, reduced-motion выключает) */}
+      <div className="marquee border-y border-white/5 bg-white/[0.02] py-4" aria-hidden>
+        <div className="marquee-track">
+          {[0, 1].map((copy) => (
+            <div key={copy} className="flex shrink-0 items-center gap-12 text-sm font-medium text-zinc-500">
+              {MARQUEE_ITEMS.map((m) => (
+                <span key={m} className="whitespace-nowrap">{m}</span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Галерея категорий в стиле Pinterest: masonry, зум фото, подписи на hover */}
+      <section className="py-14 sm:py-20">
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+          <div className="reveal">
+            <p className="eyebrow">Направления</p>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              Каждый найдёт <span className="gradient-text">своё</span>
+            </h2>
+          </div>
+          <div className="masonry mt-10">
+            {GALLERY_PHOTOS.map((p, i) => (
+              <div key={p.title} className="masonry-item reveal" style={{ transitionDelay: `${(i % 3) * 60}ms` }}>
+                <Link href="/explore" className="photo-card block">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={p.url}
+                    alt={p.title}
+                    loading="lazy"
+                    className={p.h}
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                  <div className="photo-overlay">
+                    <p className="text-sm font-semibold text-white">{p.title}</p>
+                    <p className="text-xs text-zinc-400">{p.meta}</p>
+                  </div>
+                </Link>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

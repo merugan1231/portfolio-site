@@ -6,11 +6,37 @@ import { usePathname, useRouter } from "next/navigation";
 
 const LINKS = [
   { href: "/", label: "Главная" },
-  { href: "/projects", label: "Проекты" },
   { href: "/explore", label: "Все работы" },
   { href: "/search", label: "Люди" },
   { href: "/about", label: "О сервисе" },
-  { href: "/contacts", label: "Контакты" },
+];
+
+/* Мега-меню «Сервисы»: сгруппированные ссылки с описаниями */
+const SERVICES = [
+  {
+    group: "Портфолио",
+    items: [
+      { href: "/works/new", icon: "➕", title: "Добавить работу", desc: "11 типов: сайт, бот, OSINT-кейс, дизайн…" },
+      { href: "/explore", icon: "🗂️", title: "Витрина работ", desc: "Всё, что подтвердили участники" },
+      { href: "/projects", icon: "🧩", title: "Проекты сервиса", desc: "На чём сделан сам DevShelf" },
+    ],
+  },
+  {
+    group: "Сообщество",
+    items: [
+      { href: "/search", icon: "🔎", title: "Люди и поиск", desc: "По ID, роли и специфике" },
+      { href: "/how/cabinet", icon: "👤", title: "Личный кабинет", desc: "Профиль, биография, контакты" },
+      { href: "/how/verify", icon: "🛡️", title: "Авторство DEV-VERIFY", desc: "Как работает подтверждение" },
+    ],
+  },
+  {
+    group: "Ещё",
+    items: [
+      { href: "/pro-payment", icon: "⭐", title: "DevShelf Pro", desc: "Безлимит работ — 499 ₽/мес" },
+      { href: "/tickets", icon: "🎫", title: "Поддержка", desc: "Живые тикеты с админом" },
+      { href: "/contacts", icon: "✈️", title: "Контакты", desc: "Telegram, ответ за час" },
+    ],
+  },
 ];
 
 type Me = {
@@ -41,19 +67,26 @@ function Avatar({ me, size }: { me: NonNullable<Me>; size: number }) {
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [mega, setMega] = useState(false);
   const [me, setMe] = useState<Me | undefined>(undefined);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const megaRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
   const router = useRouter();
 
-  // Закрытие дропдауна: Escape и клик вне (frontend-ui-engineering: keyboard + outside click)
+  // Закрытие всплывающих панелей: Escape и клик вне (frontend-ui-engineering)
   useEffect(() => {
-    if (!menu) return;
+    if (!menu && !mega) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setMenu(false);
+      if (e.key === "Escape") {
+        setMenu(false);
+        setMega(false);
+      }
     }
     function onPointer(e: PointerEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenu(false);
+      const t = e.target as Node;
+      if (menu && menuRef.current && !menuRef.current.contains(t)) setMenu(false);
+      if (mega && megaRef.current && !megaRef.current.contains(t)) setMega(false);
     }
     document.addEventListener("keydown", onKey);
     document.addEventListener("pointerdown", onPointer);
@@ -61,7 +94,12 @@ export default function Navbar() {
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("pointerdown", onPointer);
     };
-  }, [menu]);
+  }, [menu, mega]);
+
+  // Смена страницы закрывает всё
+  useEffect(() => {
+    setMega(false);
+  }, [pathname]);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -87,17 +125,74 @@ export default function Navbar() {
 
         {/* Десктоп-меню (планшет: только логотип + аватар/вход) */}
         <nav className="hidden items-center gap-1 lg:flex">
-          {LINKS.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={`nav-link rounded-lg px-4 py-2 text-sm font-medium hover:bg-white/5 hover:text-white ${
-                pathname === l.href ? "text-lime-300" : "text-zinc-400"
-              }`}
-            >
-              {l.label}
-            </Link>
-          ))}
+          {LINKS.map((l) =>
+            l.href === "/explore" ? (
+              <div key={l.href} ref={megaRef} className="relative">
+                <button
+                  onClick={() => setMega(!mega)}
+                  aria-expanded={mega}
+                  aria-haspopup="true"
+                  className={`nav-link flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium hover:bg-white/5 hover:text-white ${
+                    mega || pathname === l.href ? "text-lime-300" : "text-zinc-400"
+                  }`}
+                >
+                  Сервисы
+                  <span className={`text-[10px] transition-transform duration-200 ${mega ? "rotate-180" : ""}`}>▾</span>
+                </button>
+                {mega && (
+                  <div className="mega-menu absolute left-1/2 top-full z-40 mt-3 w-[640px] -translate-x-1/2">
+                    <div className="rounded-2xl border border-white/10 bg-[#0e1015]/95 p-5 shadow-[0_24px_64px_-16px_rgba(0,0,0,0.7)] backdrop-blur-xl">
+                      <div className="grid grid-cols-3 gap-5">
+                        {SERVICES.map((g) => (
+                          <div key={g.group}>
+                            <p className="px-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                              {g.group}
+                            </p>
+                            <div className="mt-2 space-y-0.5">
+                              {g.items.map((it) => (
+                                <Link
+                                  key={it.href}
+                                  href={it.href}
+                                  onClick={() => setMega(false)}
+                                  className="block rounded-xl px-2 py-2 transition-colors hover:bg-white/5"
+                                >
+                                  <span className="flex items-center gap-2 text-sm font-medium text-zinc-100">
+                                    <span aria-hidden>{it.icon}</span>
+                                    {it.title}
+                                  </span>
+                                  <span className="mt-0.5 block px-6 text-xs leading-snug text-zinc-500">
+                                    {it.desc}
+                                  </span>
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4 flex items-center justify-between rounded-xl border border-lime-300/20 bg-lime-300/[0.06] px-4 py-3">
+                        <span className="text-xs text-zinc-300">
+                          🛡️ Каждая работа проходит проверку авторства кодом DEV-VERIFY
+                        </span>
+                        <Link href="/how/verify" onClick={() => setMega(false)} className="text-xs font-semibold text-lime-300 hover:text-lime-200">
+                          Как это работает →
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={`nav-link rounded-lg px-4 py-2 text-sm font-medium hover:bg-white/5 hover:text-white ${
+                  pathname === l.href ? "text-lime-300" : "text-zinc-400"
+                }`}
+              >
+                {l.label}
+              </Link>
+            )
+          )}
 
           {me === undefined ? null : me === null ? (
             <Link href="/login" className="btn btn-ghost ml-3 !px-4 !py-2 text-sm">
@@ -193,6 +288,20 @@ export default function Navbar() {
                 }`}
               >
                 {l.label}
+              </Link>
+            ))}
+
+            {/* Сервисы (плоское подменю) */}
+            <p className="mt-3 px-4 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Сервисы</p>
+            {SERVICES.flatMap((g) => g.items).map((it) => (
+              <Link
+                key={`m-${it.href}`}
+                href={it.href}
+                onClick={() => setOpen(false)}
+                className="rounded-xl px-4 py-2.5 text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-white"
+              >
+                <span aria-hidden className="mr-2">{it.icon}</span>
+                {it.title}
               </Link>
             ))}
 
