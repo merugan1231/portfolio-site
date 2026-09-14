@@ -144,16 +144,7 @@ export default async function Home({
         <HeroParallax>
           <div className="hero-photo">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={HERO_PHOTOS[0]}
-              alt=""
-              fetchPriority="high"
-              onError={(e) => {
-                const img = e.currentTarget;
-                const i = HERO_PHOTOS.indexOf(img.src);
-                if (i >= 0 && i < HERO_PHOTOS.length - 1) img.src = HERO_PHOTOS[i + 1];
-              }}
-            />
+            <img src={HERO_PHOTOS[0]} alt="" fetchPriority="high" />
           </div>
         </HeroParallax>
         <div className="relative mx-auto flex w-full max-w-6xl flex-col items-center gap-5 px-4 pb-16 pt-32 text-center sm:gap-6 sm:px-6 sm:pb-24 sm:pt-40 lg:pb-28 lg:pt-48">
@@ -335,15 +326,7 @@ export default async function Home({
               <div key={p.title} className="masonry-item reveal" style={{ transitionDelay: `${(i % 3) * 60}ms` }}>
                 <Link href="/explore" className="photo-card block">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={p.url}
-                    alt={p.title}
-                    loading="lazy"
-                    className={p.h}
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                    }}
-                  />
+                  <img src={p.url} alt={p.title} loading="lazy" className={p.h} />
                   <div className="photo-overlay">
                     <p className="text-sm font-semibold text-white">{p.title}</p>
                     <p className="text-xs text-zinc-400">{p.meta}</p>
