@@ -3,6 +3,23 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import PageBanner from "@/components/PageBanner";
+
+/* Пул фото для страниц работ: выбирается по хэшу id — у каждой работы своё фото */
+const WORK_PHOTOS = [
+  "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=1600&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1542831371-29b0f74f9713?q=80&w=1600&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1517180102446-f3ece451e9d8?q=80&w=1600&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?q=80&w=1600&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1600&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1600&auto=format&fit=crop",
+];
+
+function photoFor(id: string): string {
+  let h = 0;
+  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return WORK_PHOTOS[h % WORK_PHOTOS.length];
+}
 
 type Review = {
   id: string;
@@ -124,17 +141,26 @@ export default function WorkPage() {
   const isOwner = viewerIsOwner;
 
   return (
+    <>
+    <PageBanner
+      photo={photoFor(work.id)}
+      title={work.title}
+      subtitle={
+        (work.type === "custom" && work.typeCustom ? work.typeCustom : (TYPE_LABELS[work.type] ?? work.type))
+      }
+    />
     <section className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
-      <div className="text-xs uppercase tracking-wide text-zinc-500">
-        {work.type === "custom" && work.typeCustom ? work.typeCustom : (TYPE_LABELS[work.type] ?? work.type)}
-      </div>
-      <div className="mt-1 flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-extrabold text-white sm:text-3xl">{work.title}</h1>
-        {work.verifyStatus === "verified" && (
+      {work.verifyStatus === "verified" && (
+        <div className="mb-4 flex flex-wrap items-center gap-3">
           <span className="rounded-full border border-lime-300/30 bg-lime-300/10 px-3 py-1 text-xs text-lime-200">
             ✅ Авторство подтверждено
           </span>
-        )}
+        </div>
+      )}
+      <div className="text-xs uppercase tracking-wide text-zinc-500 sr-only">
+        {work.type === "custom" && work.typeCustom ? work.typeCustom : (TYPE_LABELS[work.type] ?? work.type)}
+      </div>
+      <div className="mt-1 flex flex-wrap items-center gap-3">
         {work.verifyStatus === "pending" && (
           <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1 text-xs text-amber-200">
             ⏳ Авторство на проверке
@@ -272,5 +298,6 @@ export default function WorkPage() {
         </div>
       </div>
     </section>
+    </>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import PageBanner from "@/components/PageBanner";
 
 type TypeInfo = { id: string; label: string };
 type VerifyHint = { hint: string; extraLabel: string; extraPlaceholder: string };
@@ -142,12 +143,17 @@ export default function NewWorkPage() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
-      <p className="eyebrow">New Work · Публикация</p>
-      <h1 className="mt-3 text-2xl font-extrabold text-white sm:text-3xl">Новая работа</h1>
-      <p className="mt-1 text-sm text-zinc-400">
+    <>
+    <PageBanner
+      photo="https://images.unsplash.com/photo-1499750310107-5fef28a66643?q=80&w=1600&auto=format&fit=crop"
+      title="Новая работа"
+      subtitle="New Work · Публикация"
+    >
+      <p className="max-w-xl text-sm text-zinc-300 sm:text-base">
         Заполните пункты — так заинтересованные люди смогут подробно узнать о проекте.
       </p>
+    </PageBanner>
+    <section className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
 
       <div className="card mt-6 space-y-5 p-5 sm:mt-8 sm:p-6">
         <div>
@@ -265,5 +271,6 @@ export default function NewWorkPage() {
         </button>
       </div>
     </section>
+    </>
   );
 }

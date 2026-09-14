@@ -90,6 +90,8 @@ export default function CabinetPage() {
 
   return (
     <section className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
+      <p className="eyebrow">My Cabinet · Личный кабинет</p>
+      <div className="mt-4" />
       {/* Шапка: кто я */}
       <div className="card flex flex-col items-start gap-5 p-6 sm:flex-row sm:items-center sm:p-8">
         {profile.avatarUrl ? (

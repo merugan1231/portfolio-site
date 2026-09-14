@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PRO_PRICE_LABEL } from "@/lib/users";
+import PageBanner from "@/components/PageBanner";
 
 export const metadata: Metadata = {
   title: "Оплата Pro",
@@ -11,12 +12,17 @@ const TG_LINK = "https://t.me/kollew";
 
 export default function ProPaymentPage() {
   return (
-    <section className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
-      <p className="eyebrow">DevShelf Pro · Подписка</p>
-      <h1 className="mt-3 text-2xl font-extrabold text-white sm:text-3xl">Оформление Pro</h1>
-      <p className="mt-1 text-sm text-zinc-400">
+    <>
+    <PageBanner
+      photo="https://images.unsplash.com/photo-1557804506-669a67969ba0?q=80&w=1600&auto=format&fit=crop"
+      title="Оформление Pro"
+      subtitle="DevShelf Pro · Подписка"
+    >
+      <p className="max-w-xl text-sm text-zinc-300 sm:text-base">
         Pro снимает лимит 5 работ — публикуйте без ограничений. {PRO_PRICE_LABEL}.
       </p>
+    </PageBanner>
+    <section className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
 
       <div className="card mt-6 p-6 sm:p-8">
         <div className="text-center">
@@ -63,5 +69,6 @@ export default function ProPaymentPage() {
         </p>
       </div>
     </section>
+    </>
   );
 }

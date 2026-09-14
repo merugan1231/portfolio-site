@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getAllVerifiedWorks, getWorkAuthors, getWorkRating, getServiceStats, WORK_TYPES } from "@/lib/works";
 import { ensureDemoVolume, listDemoWorks, type DemoWork } from "@/lib/demo-works";
 import PageBanner from "@/components/PageBanner";
+import WorkGrid, { type GridCard } from "@/components/WorkGrid";
 
 export const metadata: Metadata = { title: "Все работы пользователей" };
 export const dynamic = "force-dynamic";
@@ -90,7 +91,18 @@ export default async function ExplorePage({
     rating: w.rating,
   }));
 
-  const cards = [...realCards, ...demoCards];
+  const cards: GridCard[] = [...realCards, ...demoCards].map((c) => ({
+    key: c.key,
+    id: c.id,
+    demo: c.demo,
+    title: c.title,
+    summary: c.summary,
+    typeLabel: c.typeLabel,
+    authorName: c.authorName,
+    authorUsername: c.authorUsername,
+    dateLabel: c.date.toLocaleDateString("ru-RU"),
+    rating: c.rating,
+  }));
 
   return (
     <>
@@ -135,49 +147,8 @@ export default async function ExplorePage({
             : "Пока нет подтверждённых работ — они появятся совсем скоро."}
       </p>
 
-      {/* Сетка работ */}
-      <div className="mt-6 grid gap-3 sm:grid-cols-2 sm:gap-4">
-        {cards.map((c) => {
-          const inner = (
-            <>
-              <div className="flex items-center justify-between gap-2">
-                <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-zinc-400">
-                  {c.typeLabel}
-                </span>
-                <span className="text-xs text-amber-300">
-                  ⭐ {c.rating.count ? `${c.rating.avg} (${c.rating.count})` : "—"}
-                </span>
-              </div>
-              <span className="mt-2 block text-lg font-bold text-white transition-colors group-hover:text-lime-300">
-                {c.title}
-              </span>
-              <p className="mt-1.5 line-clamp-2 flex-1 text-sm text-zinc-400">{c.summary}</p>
-              <div className="mt-3 flex items-center justify-between gap-2 text-xs">
-                {c.demo ? (
-                  <Link href={`/u/${c.authorUsername}`} className="text-zinc-400 transition-colors hover:text-lime-300">
-                    {c.authorName} · @{c.authorUsername}
-                  </Link>
-                ) : c.authorUsername ? (
-                  <span className="text-zinc-400 transition-colors group-hover:text-lime-300">
-                    {c.authorName} · @{c.authorUsername}
-                  </span>
-                ) : (
-                  <span className="text-zinc-600">Автор скрыт</span>
-                )}
-                <span className="flex items-center gap-2 text-zinc-600">
-                  {c.date.toLocaleDateString("ru-RU")}
-                </span>
-              </div>
-            </>
-          );
-
-          return (
-            <Link key={c.key} href={`/works/${c.id}`} className={`card group flex flex-col p-6 ${c.demo ? "opacity-90" : ""}`}>
-              {inner}
-            </Link>
-          );
-        })}
-      </div>
+      {/* Сетка работ: порции по 12 + «Показать ещё», prefetch ссылок — переход мгновенный */}
+      <WorkGrid cards={cards} />
     </section>
     </>
   );

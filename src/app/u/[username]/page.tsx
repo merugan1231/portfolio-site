@@ -3,6 +3,22 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import PageBanner from "@/components/PageBanner";
+
+/* Пул фото профилей: выбирается по хэшу юзернейма — у каждого профиля своё фото */
+const PROFILE_PHOTOS = [
+  "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1600&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=1600&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=1600&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1484417894907-623942c8ee29?q=80&w=1600&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=1600&auto=format&fit=crop",
+];
+
+function photoFor(name: string): string {
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return PROFILE_PHOTOS[h % PROFILE_PHOTOS.length];
+}
 
 type Profile = {
   id: string | null;
@@ -96,6 +112,18 @@ export default function PublicProfilePage() {
   }
 
   return (
+    <>
+    <PageBanner
+      photo={photoFor(profile.username || profile.displayName)}
+      title={profile.displayName || profile.username || "Профиль"}
+      subtitle={
+        profile.creator
+          ? "Creator · Создатель"
+          : profile.plan === "pro"
+            ? "Pro member · Pro участник"
+            : "Portfolio · Профиль"
+      }
+    />
     <section className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
       <div className="card flex flex-col items-start gap-5 p-6 sm:flex-row sm:items-center sm:p-8">
         {profile.avatarUrl ? (
@@ -202,5 +230,6 @@ export default function PublicProfilePage() {
         })}
       </div>
     </section>
+    </>
   );
 }

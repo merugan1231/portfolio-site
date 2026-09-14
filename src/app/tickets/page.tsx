@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import TicketChat from "@/components/TicketChat";
+import PageBanner from "@/components/PageBanner";
 
 type Ticket = {
   id: string;
@@ -99,12 +100,17 @@ export default function TicketsPage() {
   const restricted = accountStatus === "frozen" || accountStatus === "blocked";
 
   return (
-    <section className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
-      <p className="eyebrow">Support · Поддержка</p>
-      <h1 className="mt-3 text-2xl font-extrabold text-white sm:text-3xl">Тикеты</h1>
-      <p className="mt-1 text-sm text-zinc-400">
+    <>
+    <PageBanner
+      photo="https://images.unsplash.com/photo-1516387938699-a93567ec168e?q=80&w=1600&auto=format&fit=crop"
+      title="Тикеты"
+      subtitle="Support · Поддержка"
+    >
+      <p className="max-w-xl text-sm text-zinc-300 sm:text-base">
         Обращения к администрации: оспаривание модерации, вопросы, жалобы. Ответ появится здесь же.
       </p>
+    </PageBanner>
+    <section className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
 
       {/* Карточка наказания: что применили, когда и за что */}
       {restricted && (
@@ -229,5 +235,6 @@ export default function TicketsPage() {
         ))}
       </div>
     </section>
+    </>
   );
 }

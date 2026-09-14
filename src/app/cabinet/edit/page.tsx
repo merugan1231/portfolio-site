@@ -302,6 +302,8 @@ export default function CabinetPage() {
 
   return (
     <section className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
+      <p className="eyebrow">Edit Profile · Настройка</p>
+      <div className="mt-4" />
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
         <div>
           <Link href="/cabinet" className="text-sm text-zinc-500 transition-colors hover:text-zinc-300">
