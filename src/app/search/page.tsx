@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import PageBanner from "@/components/PageBanner";
 
 type Found = {
   id: string | null;
@@ -89,11 +90,19 @@ export default function SearchPage() {
   const roleLabel = (id: string) => ROLES.find((r) => r.id === id);
 
   return (
-    <section className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
-      <h1 className="text-2xl font-extrabold text-white sm:text-3xl">Люди</h1>
-      <p className="mt-1 text-sm text-zinc-400">
-        Найдите пользователя по юзернейму, имени или ID (например, «1» — аккаунт создателя), по роли или кликните на специфику у любого участника.
-      </p>
+    <>
+      {/* Фото-баннер раздела */}
+      <PageBanner
+        photo="https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2400&auto=format&fit=crop"
+        title="Люди"
+        subtitle="Find People · Сообщество"
+      >
+        <p className="max-w-2xl text-sm text-zinc-300 sm:text-base">
+          Найдите пользователя по юзернейму, имени или ID (например, «1» — аккаунт создателя), по роли или кликните на специфику у любого участника.
+        </p>
+      </PageBanner>
+
+      <section className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
 
       <input
         value={q}
@@ -227,5 +236,6 @@ export default function SearchPage() {
         </button>
       )}
     </section>
+    </>
   );
 }

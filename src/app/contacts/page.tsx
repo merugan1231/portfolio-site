@@ -1,20 +1,24 @@
 import type { Metadata } from "next";
+import PageBanner from "@/components/PageBanner";
 
 export const metadata: Metadata = { title: "Контакты" };
 
 export default function ContactsPage() {
   return (
-    <section className="relative mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6 sm:py-16">
-      <div className="glow left-1/2 top-[-80px] h-72 w-72 -translate-x-1/2 bg-lime-400" />
-      <div className="relative text-center">
-        <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
-          Контакты
-        </h1>
-        <p className="mx-auto mt-4 max-w-xl text-lg text-zinc-400">
+    <>
+      <PageBanner
+        photo="https://images.unsplash.com/photo-1611605698335-8b1569810432?q=80&w=2400&auto=format&fit=crop"
+        title="Контакты"
+        subtitle="Contact · Связь"
+      >
+        <p className="mx-auto max-w-xl text-base text-zinc-300 sm:text-lg">
           Есть предложения по сервису, вопросы по рекламе или проблемы с аккаунтом и отзывами?
           Пишите в Telegram — отвечаю лично.
         </p>
-      </div>
+      </PageBanner>
+
+      <section className="relative mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6 sm:py-16">
+      <div className="glow left-1/2 top-[-80px] h-72 w-72 -translate-x-1/2 bg-lime-400" />
 
       <a
         href="https://t.me/kollew"
@@ -39,5 +43,6 @@ export default function ContactsPage() {
         Обычно отвечаю в течение часа. Ночные сообщения читаю утром.
       </p>
     </section>
+    </>
   );
 }

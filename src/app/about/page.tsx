@@ -1,15 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import PageBanner from "@/components/PageBanner";
 
 export const metadata: Metadata = { title: "О сервисе" };
 
 export default function AboutPage() {
   return (
-    <section className="relative mx-auto w-full max-w-4xl flex-1 px-4 py-10 sm:px-6 sm:py-16">
+    <>
+      <PageBanner
+        photo="https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=2400&auto=format&fit=crop"
+        title={
+          <>
+            О <span className="gradient-text">сервисе</span>
+          </>
+        }
+        subtitle="About DevShelf · О сервисе"
+      />
+      <section className="relative mx-auto w-full max-w-4xl flex-1 px-4 py-10 sm:px-6 sm:py-16">
       <div className="glow left-[-100px] top-[-80px] h-80 w-80 bg-violet-500" />
-      <h1 className="relative text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
-        О <span className="gradient-text">сервисе</span>
-      </h1>
 
       <p className="relative mt-6 text-lg leading-relaxed text-zinc-300">
         <strong className="text-white">DevShelf</strong> — это библиотека работ и портфолио для всех,
@@ -79,5 +87,6 @@ export default function AboutPage() {
         </Link>
       </div>
     </section>
+    </>
   );
 }

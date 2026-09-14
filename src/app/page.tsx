@@ -324,14 +324,15 @@ export default async function Home({
           <div className="masonry mt-10">
             {GALLERY_PHOTOS.map((p, i) => (
               <div key={p.title} className="masonry-item reveal" style={{ transitionDelay: `${(i % 3) * 60}ms` }}>
-                <Link href="/explore" className="photo-card block">
+                {/* Декоративная карточка-фото без ссылки: клик не уводит со страницы и не ломает скролл */}
+                <div className="photo-card">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={p.url} alt={p.title} loading="lazy" className={p.h} />
                   <div className="photo-overlay">
                     <p className="text-sm font-semibold text-white">{p.title}</p>
                     <p className="text-xs text-zinc-400">{p.meta}</p>
                   </div>
-                </Link>
+                </div>
               </div>
             ))}
           </div>

@@ -553,8 +553,8 @@ export default function AdminPage() {
             </button>
           </section>
         </>
-      ) : (
-        /* ---- Пользователи: тариф, статус, роли администрации ---- */
+      ) : tab === "users" ? (
+        /* ---- Пользователи: тариф, статус, роли администрации. Только вкладка «Пользователи» ---- */
         <section className="card overflow-x-auto">
           {/* Поиск: по логину, юзернейму, email или точному публичному ID (например «1» — создатель) */}
           <div className="border-b border-white/10 p-4">
@@ -724,7 +724,7 @@ export default function AdminPage() {
             </tbody>
           </table>
         </section>
-      )}
+      ) : null}
 
       {tab === "moderation" && (
         <ModerationTab

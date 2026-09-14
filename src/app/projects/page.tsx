@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getPortfolio } from "@/lib/storage";
 import type { Project } from "@/lib/portfolio";
+import PageBanner from "@/components/PageBanner";
 
 export const metadata: Metadata = { title: "Лучшие работы наших пользователей" };
 export const dynamic = "force-dynamic";
@@ -79,18 +80,23 @@ export default async function ProjectsPage() {
   const { projects } = await getPortfolio();
 
   return (
-    <section className="relative mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6 sm:py-16">
+    <>
+      <PageBanner
+        photo="https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=2400&auto=format&fit=crop"
+        title="Лучшие работы наших пользователей"
+        subtitle="Showcase · Витрина сервиса"
+      >
+        <p className="max-w-2xl text-base text-zinc-300 sm:text-lg">
+          Отобранные проекты сообщества: сайты, боты, OSINT-кейсы, дизайн. Листайте вниз — каждая работа с годом, тегами и ссылками.
+        </p>
+      </PageBanner>
+
+      <section className="relative mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6 sm:py-16">
       <div className="glow right-[-80px] top-[-60px] h-72 w-72 bg-indigo-500" />
 
       {/* Шапка-афиша */}
       <div className="relative">
-        <p className="text-xs uppercase tracking-[0.3em] text-lime-300">DevShelf · витрина сервиса</p>
-        <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-white sm:text-5xl">
-          Лучшие работы наших пользователей
-        </h1>
-        <p className="mt-4 max-w-2xl text-base text-zinc-400 sm:text-lg">
-          Отобранные проекты сообщества: сайты, боты, OSINT-кейсы, дизайн. Листайте вниз — каждая работа с годом, тегами и ссылками.
-        </p>
+        <p className="text-xs uppercase tracking-[0.3em] text-lime-300 sr-only">DevShelf · витрина сервиса</p>
         <div className="mt-6 flex flex-col items-start gap-2 text-sm text-zinc-500 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
           <span className="inline-flex items-center gap-2">
             <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-lime-300" />
@@ -125,5 +131,6 @@ export default async function ProjectsPage() {
         </Link>
       </div>
     </section>
+    </>
   );
 }

@@ -63,7 +63,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="flex min-h-full flex-col font-sans">
         <ScrollProgress />
         <Navbar />
-        <main className="flex flex-1 flex-col">{children}</main>
+        {/* Отступ под плавающий навбар-пилюлю, чтобы он не загораживал заголовки страниц */}
+        <main className="flex flex-1 flex-col pt-20 sm:pt-24">{children}</main>
         <Footer />
         <RevealOnScroll />
       </body>
