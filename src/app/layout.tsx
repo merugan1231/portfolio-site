@@ -47,10 +47,9 @@ export const metadata: Metadata = {
     description: "Портфолио из подтверждённых работ: процесс, команда, стек и результат.",
   },
   robots: { index: true, follow: true },
-  // Мета-тег подтверждения прав на домен для аукциона Telderi
+  // Подтверждение прав на домен для аукциона Telderi (точный формат из их формы)
   other: {
-    "telderi2d06af92715fe9b455248e9eb9e56e10": "Telderi",
-    "telderi-site-verification": "telderi2d06af92715fe9b455248e9eb9e56e10",
+    telderi: "2d06af92715fe9b455248e9eb9e56e10",
   },
 };
 
