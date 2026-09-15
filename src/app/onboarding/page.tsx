@@ -66,7 +66,7 @@ export default function OnboardingPage() {
     "w-full rounded-xl border border-white/10 bg-zinc-900/70 px-4 py-3 text-white outline-none transition-colors focus:border-indigo-400";
 
   return (
-    <section className="relative flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
+    <section className="relative flex flex-1 items-center justify-center px-4 py-10 pt-20 sm:px-6 sm:py-14 sm:pt-24">
       <div className="glow left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 bg-violet-500" />
       <div className="card relative w-full max-w-md p-6 sm:p-8">
         {loading ? (

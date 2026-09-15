@@ -362,7 +362,7 @@ export default function AdminPage() {
   })();
 
   return (
-    <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 pt-20 sm:px-6 sm:py-10 sm:pt-24">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-white">Панель управления</h1>

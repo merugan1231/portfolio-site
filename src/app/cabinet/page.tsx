@@ -89,7 +89,7 @@ export default function CabinetPage() {
   const verifiedCount = works.filter((w) => w.verifyStatus === "verified").length;
 
   return (
-    <section className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
+    <section className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 pt-20 sm:px-6 sm:py-12 sm:pt-24">
       <p className="eyebrow">My Cabinet · Личный кабинет</p>
       <div className="mt-4" />
       {/* Шапка: кто я */}

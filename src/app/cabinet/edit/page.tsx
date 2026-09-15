@@ -301,7 +301,7 @@ export default function CabinetPage() {
   const daysOnService = Math.max(1, Math.floor((Date.now() - new Date(profile.memberSince).getTime()) / 86400000) + 1);
 
   return (
-    <section className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
+    <section className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 pt-20 sm:px-6 sm:py-12 sm:pt-24">
       <p className="eyebrow">Edit Profile · Настройка</p>
       <div className="mt-4" />
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">

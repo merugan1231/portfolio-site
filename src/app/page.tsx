@@ -132,7 +132,7 @@ export default async function Home({
     <>
       {/* Приветствие после входа */}
       {welcome ? (
-      <div className="mx-auto w-full max-w-6xl px-4 pt-6 sm:px-6">
+      <div className="mx-auto w-full max-w-6xl px-4 pt-20 sm:px-6 sm:pt-24">
         <div className="rounded-xl border border-lime-300/30 bg-lime-300/10 px-5 py-3 text-sm text-lime-200">
             Добро пожаловать, {welcome}! Вы успешно вошли.
           </div>
